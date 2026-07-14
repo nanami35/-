@@ -1,0 +1,913 @@
+// ============================================================
+// 飲食店マーケティングOS — Prisma スキーマ
+// PostgreSQL (Supabase) を前提としたマルチテナント設計。
+// すべての業務テーブルは organizationId でスコープし、
+// Supabase Row Level Security(RLS) で org 分離を強制する想定。
+// 重要データは deletedAt による論理削除に対応する。
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------------- 列挙型 ----------------
+enum Role {
+  admin
+  marketer
+  client
+}
+
+enum ContractStatus {
+  prospect
+  negotiating
+  active
+  paused
+  ended
+}
+
+enum IssueStatus {
+  open
+  in_progress
+  resolved
+  monitoring
+}
+
+enum InitiativeStatus {
+  planned
+  in_progress
+  completed
+  paused
+  cancelled
+}
+
+enum SocialStatus {
+  idea
+  planning
+  shooting
+  editing
+  review
+  fixing
+  scheduled
+  posted
+  analyzed
+}
+
+enum TaskStatus {
+  todo
+  in_progress
+  review
+  done
+}
+
+enum Priority {
+  low
+  medium
+  high
+  urgent
+}
+
+enum ReportStatus {
+  draft
+  review
+  approved
+  shared
+}
+
+// ============================================================
+// テナント / ユーザー
+// ============================================================
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  plan      String   @default("standard")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users            User[]
+  clients          Client[]
+  stores           Store[]
+  contracts        Contract[]
+  clientMembers    ClientMember[]
+  hearings         Hearing[]
+  diagnoses        Diagnosis[]
+  diagnosisCategories DiagnosisCategory[]
+  diagnosisItems   DiagnosisItem[]
+  diagnosisScores  DiagnosisScore[]
+  marketAnalyses   MarketAnalysis[]
+  tradeAreaAnalyses TradeAreaAnalysis[]
+  competitors      Competitor[]
+  demandAnalyses   DemandAnalysis[]
+  supplyAnalyses   SupplyAnalysis[]
+  issues           Issue[]
+  strategies       Strategy[]
+  kpiDefinitions   KpiDefinition[]
+  kpiRecords       KpiRecord[]
+  initiatives      Initiative[]
+  socialContents   SocialContent[]
+  tasks            Task[]
+  taskComments     TaskComment[]
+  meetings         Meeting[]
+  meetingActions   MeetingAction[]
+  monthlyReports   MonthlyReport[]
+  knowledgeCases   KnowledgeCase[]
+  files            File[]
+  activityLogs     ActivityLog[]
+
+  @@map("organizations")
+}
+
+model User {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  // Supabase Auth の user id と紐付ける
+  authUserId     String?  @unique
+  name           String
+  email          String
+  role           Role     @default(marketer)
+  title          String?
+  avatarColor    String?
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  deletedAt      DateTime?
+
+  consultingClients Client[]     @relation("ClientConsultant")
+  consultingStores  Store[]      @relation("StoreConsultant")
+  assignedIssues    Issue[]      @relation("IssueAssignee")
+  assignedInitiatives Initiative[] @relation("InitiativeAssignee")
+  assignedTasks     Task[]       @relation("TaskAssignee")
+  taskComments      TaskComment[]
+
+  @@index([organizationId])
+  @@index([email])
+  @@map("users")
+}
+
+// ============================================================
+// クライアント / 店舗 / 契約
+// ============================================================
+model Client {
+  id                String   @id @default(cuid())
+  organizationId    String
+  organization      Organization @relation(fields: [organizationId], references: [id])
+  name              String
+  representativeName String?
+  contactName       String?
+  phone             String?
+  email             String?
+  address           String?
+  website           String?
+  contractStatus    ContractStatus @default(prospect)
+  contractStartDate DateTime?
+  contractEndDate   DateTime?
+  plan              String?
+  monthlyFee        Int?
+  consultantId      String?
+  consultant        User?    @relation("ClientConsultant", fields: [consultantId], references: [id])
+  supportGoal       String?
+  currentIssues     String?
+  goal              String?
+  memo              String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  createdBy         String?
+  updatedBy         String?
+  deletedAt         DateTime?
+
+  stores        Store[]
+  contracts     Contract[]
+  clientMembers ClientMember[]
+  meetings      Meeting[]
+  tasks         Task[]
+
+  @@index([organizationId])
+  @@index([contractStatus])
+  @@map("clients")
+}
+
+model Store {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  clientId       String
+  client         Client   @relation(fields: [clientId], references: [id])
+  name           String
+  businessType   String?
+  genre          String?
+  address        String?
+  openingHours   String?
+  closedDays     String?
+  seats          Int?
+  parkingLots    Int?
+  avgSpend       Int?
+  monthlySales   Int?
+  monthlyCustomers Int?
+  employees      Int?
+  takeout        Boolean  @default(false)
+  delivery       Boolean  @default(false)
+  reservationMethod String?
+  mainCustomerSegment String?
+  tradeArea      String?
+  managerName    String?
+  // 外部媒体
+  officialUrl      String?
+  googleBusinessUrl String?
+  instagramUrl     String?
+  tiktokUrl        String?
+  lineUrl          String?
+  tabelogUrl       String?
+  hotpepperUrl     String?
+  otherMedia       String?
+  // 支援情報
+  supportStartDate DateTime?
+  consultantId     String?
+  consultant       User?    @relation("StoreConsultant", fields: [consultantId], references: [id])
+  phase            String?
+  keyIssue         String?
+  monthlyFocus     String?
+  targetGoal       String?
+  nextMeetingDate  DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  createdBy        String?
+  updatedBy        String?
+  deletedAt        DateTime?
+
+  hearings       Hearing[]
+  diagnoses      Diagnosis[]
+  marketAnalyses MarketAnalysis[]
+  tradeAreaAnalyses TradeAreaAnalysis[]
+  competitors    Competitor[]
+  demandAnalyses DemandAnalysis[]
+  supplyAnalyses SupplyAnalysis[]
+  issues         Issue[]
+  strategies     Strategy[]
+  kpiRecords     KpiRecord[]
+  initiatives    Initiative[]
+  socialContents SocialContent[]
+  tasks          Task[]
+  meetings       Meeting[]
+  monthlyReports MonthlyReport[]
+
+  @@index([organizationId])
+  @@index([clientId])
+  @@map("stores")
+}
+
+model Contract {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  clientId       String
+  client         Client   @relation(fields: [clientId], references: [id])
+  plan           String
+  monthlyFee     Int?
+  startDate      DateTime?
+  endDate        DateTime?
+  status         ContractStatus @default(active)
+  note           String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  createdBy      String?
+  updatedBy      String?
+  deletedAt      DateTime?
+
+  @@index([organizationId])
+  @@index([clientId])
+  @@map("contracts")
+}
+
+// クライアント企業側の担当者（将来のクライアント画面用）
+model ClientMember {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  clientId       String
+  client         Client   @relation(fields: [clientId], references: [id])
+  name           String
+  email          String?
+  role           String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  deletedAt      DateTime?
+
+  @@index([organizationId])
+  @@index([clientId])
+  @@map("client_members")
+}
+
+// ============================================================
+// ヒアリング
+// ============================================================
+model Hearing {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  storeId        String
+  store          Store    @relation(fields: [storeId], references: [id])
+  status         String   @default("draft") // draft | completed
+  // 可変項目は JSON で保持（キーは HEARING_SECTIONS に対応）
+  fields         Json
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  createdBy      String?
+  updatedBy      String?
+  deletedAt      DateTime?
+
+  @@index([organizationId])
+  @@index([storeId])
+  @@map("hearings")
+}
+
+// ============================================================
+// 店舗診断（5つの価値 → カテゴリ → 項目 → スコア）
+// ============================================================
+model Diagnosis {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  storeId        String
+  store          Store    @relation(fields: [storeId], references: [id])
+  date           DateTime
+  evaluatorId    String?
+  summary        String?
+  totalScore     Int?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  createdBy      String?
+  updatedBy      String?
+  deletedAt      DateTime?
+
+  scores DiagnosisScore[]
+
+  @@index([organizationId])
+  @@index([storeId])
+  @@map("diagnoses")
+}
+
+// 評価カテゴリ（テンプレート、管理者が編集可能）
+model DiagnosisCategory {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  key            String
+  label          String
+  description    String?
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  items DiagnosisItem[]
+
+  @@index([organizationId])
+  @@map("diagnosis_categories")
+}
+
+// 評価項目（テンプレート）
+model DiagnosisItem {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  categoryId     String
+  category       DiagnosisCategory @relation(fields: [categoryId], references: [id])
+  label          String
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  scores DiagnosisScore[]
+
+  @@index([organizationId])
+  @@index([categoryId])
+  @@map("diagnosis_items")
+}
+
+// 各診断における項目スコア
+model DiagnosisScore {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  diagnosisId    String
+  diagnosis      Diagnosis @relation(fields: [diagnosisId], references: [id], onDelete: Cascade)
+  itemId         String?
+  item           DiagnosisItem? @relation(fields: [itemId], references: [id])
+  categoryKey    String
+  itemLabel      String
+  score          Int      // 1-5
+  comment        String?
+  issue          String?
+  improvement    String?
+  priority       Priority?
+  photoUrl       String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([diagnosisId])
+  @@map("diagnosis_scores")
+}
+
+// ============================================================
+// 市場・商圏・競合 / 需要・供給
+// ============================================================
+model MarketAnalysis {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  storeId        String
+  store          Store    @relation(fields: [storeId], references: [id])
+  marketSize     String?
+  marketGrowth   String?
+  trends         String?
+  customerNeeds  String?
+  opportunities  String?
+  threats        String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  createdBy      String?
+  updatedBy      String?
+  deletedAt      DateTime?
+
+  @@index([organizationId])
+  @@index([storeId])
+  @@map("market_analyses")
+}
+
+model TradeAreaAnalysis {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  storeId        String
+  store          Store    @relation(fields: [storeId], references: [id])
+  range          String?
+  population     String?
+  daytimePopulation String?
+  nighttimePopulation String?
+  ageComposition String?
+  householdComposition String?
+  facilities     String?
+  traffic        String?
+  timeCharacteristics String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  createdBy      String?
+  updatedBy      String?
+  deletedAt      DateTime?
+
+  @@index([organizationId])
+  @@index([storeId])
+  @@map("trade_area_analyses")
+}
+
+model Competitor {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  storeId        String
+  store          Store    @relation(fields: [storeId], references: [id])
+  name           String
+  url            String?
+  distanceKm     Float?
+  businessType   String?
+  target         String?
+  priceRange     String?
+  avgSpend       Int?
+  signatureProduct String?
+  strengths      String?
+  weaknesses     String?
+  googleRating   Float?
+  reviewCount    Int?
+  snsFollowers   Int?
+  postFrequency  String?
+  threatLevel    Int      @default(1) // 1-3
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  createdBy      String?
+  updatedBy      String?
+  deletedAt      DateTime?
+
+  @@index([organizationId])
+  @@index([storeId])
+  @@map("competitors")
+}
+
+model DemandAnalysis {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  storeId        String
+  store          Store    @relation(fields: [storeId], references: [id])
+  valueAxis      String   // product | service | atmosphere | image | experience
+  target         String?
+  desire         String?
+  content        String?  // 課題・悩み / 期待 など
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  createdBy      String?
+  updatedBy      String?
+  deletedAt      DateTime?
+
+  @@index([organizationId])
+  @@index([storeId])
+  @@map("demand_analyses")
+}
+
+model SupplyAnalysis {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  storeId        String
+  store          Store    @relation(fields: [storeId], references: [id])
+  valueAxis      String
+  content        String?
+  gapNote        String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  createdBy      String?
+  updatedBy      String?
+  deletedAt      DateTime?
+
+  @@index([organizationId])
+  @@index([storeId])
+  @@map("supply_analyses")
+}
+
+// ============================================================
+// 課題 / 戦略
+// ============================================================
+model Issue {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  storeId        String
+  store          Store    @relation(fields: [storeId], references: [id])
+  title          String
+  category       String?
+  detail         String?
+  basis          String?
+  impact         Int      @default(2) // 1-3
+  urgency        Int      @default(2)
+  difficulty     Int      @default(2)
+  status         IssueStatus @default(open)
+  assigneeId     String?
+  assignee       User?    @relation("IssueAssignee", fields: [assigneeId], references: [id])
+  foundDate      DateTime @default(now())
+  dueDate        DateTime?
+  relatedKpi     String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  createdBy      String?
+  updatedBy      String?
+  deletedAt      DateTime?
+
+  @@index([organizationId])
+  @@index([storeId])
+  @@map("issues")
+}
+
+model Strategy {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  storeId        String
+  store          Store    @relation(fields: [storeId], references: [id])
+  goal           String
+  theme          String?
+  target         String?
+  positioning    String?
+  reasonChosen   String?
+  centerPin      String?
+  keyIssues      String?
+  period         String?
+  budget         Int?
+  assigneeId     String?
+  acquisitionTactics String?
+  salesTactics   String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  createdBy      String?
+  updatedBy      String?
+  deletedAt      DateTime?
+
+  @@index([organizationId])
+  @@index([storeId])
+  @@map("strategies")
+}
+
+// ============================================================
+// KPI
+// ============================================================
+model KpiDefinition {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  key            String
+  label          String
+  unit           String?
+  category       String
+  direction      String   @default("up") // up | down
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([organizationId])
+  @@map("kpi_definitions")
+}
+
+model KpiRecord {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  storeId        String
+  store          Store    @relation(fields: [storeId], references: [id])
+  month          String   // YYYY-MM
+  category       String
+  kpiKey         String
+  actual         Float?
+  target         Float?
+  comment        String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  createdBy      String?
+  updatedBy      String?
+  deletedAt      DateTime?
+
+  @@unique([storeId, month, kpiKey])
+  @@index([organizationId])
+  @@index([storeId, month])
+  @@map("kpi_records")
+}
+
+// ============================================================
+// 施策 / SNSコンテンツ
+// ============================================================
+model Initiative {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  storeId        String
+  store          Store    @relation(fields: [storeId], references: [id])
+  name           String
+  category       String?
+  purpose        String?
+  targetCustomer String?
+  hypothesis     String?
+  content        String?
+  channel        String?
+  startDate      DateTime?
+  endDate        DateTime?
+  budget         Int?
+  assigneeId     String?
+  assignee       User?    @relation("InitiativeAssignee", fields: [assigneeId], references: [id])
+  kpiKey         String?
+  targetValue    Float?
+  actualValue    Float?
+  status         InitiativeStatus @default(planned)
+  result         String?
+  goodPoints     String?
+  improvements   String?
+  nextAction     String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  createdBy      String?
+  updatedBy      String?
+  deletedAt      DateTime?
+
+  tasks Task[]
+
+  @@index([organizationId])
+  @@index([storeId])
+  @@map("initiatives")
+}
+
+model SocialContent {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  storeId        String
+  store          Store    @relation(fields: [storeId], references: [id])
+  platform       String
+  theme          String
+  purpose        String?
+  target         String?
+  format         String?
+  title          String?
+  caption        String?
+  script         String?
+  assigneeId     String?
+  shootDate      DateTime?
+  postDate       DateTime?
+  status         SocialStatus @default(idea)
+  postUrl        String?
+  metrics        String?
+  retrospective  String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  createdBy      String?
+  updatedBy      String?
+  deletedAt      DateTime?
+
+  @@index([organizationId])
+  @@index([storeId])
+  @@map("social_contents")
+}
+
+// ============================================================
+// タスク / ミーティング
+// ============================================================
+model Task {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  title          String
+  detail         String?
+  assigneeId     String?
+  assignee       User?    @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  dueDate        DateTime?
+  priority       Priority @default(medium)
+  status         TaskStatus @default(todo)
+  clientId       String?
+  client         Client?  @relation(fields: [clientId], references: [id])
+  storeId        String?
+  store          Store?   @relation(fields: [storeId], references: [id])
+  initiativeId   String?
+  initiative     Initiative? @relation(fields: [initiativeId], references: [id])
+  checklist      Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  createdBy      String?
+  updatedBy      String?
+  deletedAt      DateTime?
+
+  comments TaskComment[]
+
+  @@index([organizationId])
+  @@index([assigneeId])
+  @@index([storeId])
+  @@map("tasks")
+}
+
+model TaskComment {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  taskId         String
+  task           Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
+  body           String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  deletedAt      DateTime?
+
+  @@index([organizationId])
+  @@index([taskId])
+  @@map("task_comments")
+}
+
+model Meeting {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  clientId       String?
+  client         Client?  @relation(fields: [clientId], references: [id])
+  storeId        String?
+  store          Store?   @relation(fields: [storeId], references: [id])
+  datetime       DateTime
+  attendees      String?
+  agenda         String?
+  minutes        String?
+  decisions      String?
+  nextDate       DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  createdBy      String?
+  updatedBy      String?
+  deletedAt      DateTime?
+
+  actions MeetingAction[]
+
+  @@index([organizationId])
+  @@index([clientId])
+  @@map("meetings")
+}
+
+model MeetingAction {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  meetingId      String
+  meeting        Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  content        String
+  assigneeId     String?
+  dueDate        DateTime?
+  done           Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([meetingId])
+  @@map("meeting_actions")
+}
+
+// ============================================================
+// 月次レポート / ナレッジ
+// ============================================================
+model MonthlyReport {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  storeId        String
+  store          Store    @relation(fields: [storeId], references: [id])
+  month          String   // YYYY-MM
+  status         ReportStatus @default(draft)
+  // セクションタイトル → 本文
+  sections       Json
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  createdBy      String?
+  updatedBy      String?
+  deletedAt      DateTime?
+
+  @@unique([storeId, month])
+  @@index([organizationId])
+  @@index([storeId])
+  @@map("monthly_reports")
+}
+
+model KnowledgeCase {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  title          String
+  businessType   String?
+  storeScale     String?
+  region         String?
+  avgSpend       Int?
+  issue          String?
+  initiative     String?
+  channels       String[]
+  period         String?
+  beforeMetrics  String?
+  afterMetrics   String?
+  result         String?
+  successFactors String?
+  reproConditions String?
+  tags           String[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  createdBy      String?
+  updatedBy      String?
+  deletedAt      DateTime?
+
+  @@index([organizationId])
+  @@map("knowledge_cases")
+}
+
+// ============================================================
+// ファイル / 操作ログ
+// ============================================================
+model File {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  name           String
+  mimeType       String?
+  size           Int?
+  storagePath    String   // Supabase Storage のパス
+  // 紐付け先（多態）。entityType + entityId で参照する
+  entityType     String?
+  entityId       String?
+  uploadedBy     String?
+  createdAt      DateTime @default(now())
+  deletedAt      DateTime?
+
+  @@index([organizationId])
+  @@index([entityType, entityId])
+  @@map("files")
+}
+
+model ActivityLog {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  userId         String?
+  action         String   // create | update | delete | login など
+  entityType     String?
+  entityId       String?
+  target         String?
+  metadata       Json?
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("activity_logs")
+}
