@@ -95,7 +95,7 @@ end $$;
 -- ドキュメントチャンク: 承認済み かつ 可視性を満たすもののみ検索対象
 alter table document_chunks enable row level security;
 create policy sel_chunks on document_chunks for select using (
-  approved and can_view(visibility, organization_id, created_by := auth.uid(), p_status := 'published', p_deleted_at := null)
+  approved and can_view(visibility, organization_id, auth.uid(), 'published'::status, null::timestamptz)
 );
 
 -- 個人データ(お気に入り・履歴・通知)は本人のみ

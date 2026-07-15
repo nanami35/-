@@ -102,15 +102,77 @@ E2E_BASE_URL=http://localhost:3000 npm run test:e2e
 
 ---
 
-## 本番(Supabase)構成への切り替え
-
-1. Supabase プロジェクトを作成し、`supabase/migrations/*.sql` を適用
-   (`0001_init.sql`: スキーマ / `0002_rls.sql`: Row Level Security + pgvector)。
-2. `.env.local` に Supabase 接続情報を設定し、`DATA_SOURCE=supabase`。
-3. `AI_PROVIDER` と各 API キーを設定すると、RAG が実 API + pgvector で動作。
+## 本番(Supabase)構成への接続手順
 
 アプリ層の可視性ロジック(`src/lib/rbac.ts` の `canView`)と RLS の `can_view()`
-関数は同じ判定になるよう対応付けています。
+関数は同じ判定になるよう対応付けています。接続クライアントは `src/lib/supabase.ts`。
+
+### 1. プロジェクト作成と接続情報
+
+1. [Supabase](https://supabase.com/) でプロジェクトを作成。
+2. **Project Settings → API** から以下を取得し `.env.local` に設定:
+   ```env
+   DATA_SOURCE=supabase
+   NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
+   SUPABASE_SERVICE_ROLE_KEY=eyJ...        # サーバー専用・秘匿
+   ```
+   接続文字列(**Project Settings → Database**)を `DATABASE_URL` として控えておく。
+
+### 2. マイグレーション + Seed の適用
+
+Supabase CLI を使う場合(推奨):
+```bash
+supabase link --project-ref <ref>
+supabase db push           # supabase/migrations/*.sql を適用
+supabase db seed           # supabase/seed.sql(または psql で seed.sql を実行)
+```
+
+CLI を使わず psql で直接適用する場合:
+```bash
+# 本番 Supabase には auth スキーマが既存のため bootstrap は不要
+psql "$DATABASE_URL" -f supabase/migrations/0001_init.sql
+psql "$DATABASE_URL" -f supabase/migrations/0002_rls.sql
+psql "$DATABASE_URL" -f supabase/migrations/0003_grants.sql
+psql "$DATABASE_URL" -f supabase/seed.sql
+```
+
+> 本番(ホスト型)では、`user_profiles` に紐づくユーザーは Supabase Auth 経由で
+> 作成します(`seed.sql` の `auth.users` への INSERT はローカル/CI 用)。
+
+### 3. RLS の実機テスト(権限別ユーザー3種)
+
+実 PostgreSQL + pgvector に対して、マイグレーション → Seed → RLS 検証を一括実行:
+```bash
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/postgres" \
+  bash supabase/test/run.sh
+```
+`super_admin / editor(コエニ) / viewer(ABENGERS)` の3ユーザーで RLS が行を
+正しく絞り込むこと(可視件数 5 / 1 / 2 など)を assertion 付きで検証します。
+このテストは GitHub Actions の `db-rls` ジョブとして PR ごとに自動実行されます。
+
+### 4. AI(RAG)
+
+`AI_PROVIDER` と各 API キーを設定すると、RAG が実 API + pgvector(`document_chunks`)で動作します。
+
+---
+
+## Vercel へのデプロイ
+
+1. GitHub リポジトリを [Vercel](https://vercel.com/) にインポート(Framework: **Next.js** を自動検出)。
+2. **Settings → Environment Variables** に以下を登録(Production / Preview):
+   | Key | 例 | 備考 |
+   | --- | --- | --- |
+   | `DATA_SOURCE` | `supabase` | 本番は supabase 推奨 |
+   | `AUTH_SECRET` | (32文字以上のランダム値) | 必須・秘匿 |
+   | `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | — | Supabase 接続 |
+   | `SUPABASE_SERVICE_ROLE_KEY` | — | サーバー専用・秘匿 |
+   | `AI_PROVIDER` + 各 API キー | `anthropic` 等 | 省略時は mock |
+3. デプロイ実行(`main` への push または PR の Preview で自動)。ビルドは `npm run build`。
+4. 事前に「本番(Supabase)構成への接続手順」でマイグレーション + Seed を適用しておく。
+
+> `DATA_SOURCE` を省略すると `seed`(インメモリ)で起動するため、DB 未接続でも
+> デモ用途としてそのままデプロイ・動作します。
 
 ---
 
