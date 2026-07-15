@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, FileDown, Link2, Sparkles } from "lucide-react";
+import { ArrowLeft, FileDown, Link2 } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { getReport, getStore, getKpiByStore } from "@/lib/data";
 import { REPORT_SECTIONS, KPI_DEFINITIONS } from "@/lib/constants";
@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ReportStatusBadge } from "@/components/status-badge";
 import { PrintButton } from "@/components/reports/print-button";
+import { AiDraftButton } from "@/components/ai/ai-draft-button";
 import { formatMonth, formatNumber, formatPercent, achievementRate } from "@/lib/utils";
 
 /** KPIサマリーに表示する主要KPI */
@@ -74,10 +75,13 @@ export default async function ReportDetailPage({
             共有URL発行
           </Button>
           <div className="flex flex-col gap-1 sm:ml-auto sm:items-end">
-            <Button variant="gold" size="sm">
-              <Sparkles className="h-4 w-4" />
-              AI下書き生成
-            </Button>
+            <AiDraftButton
+              task="report_draft"
+              storeId={report.storeId}
+              month={report.month}
+              label="AIでレポート下書き生成"
+              size="sm"
+            />
             <p className="max-w-xs text-[11px] text-muted-foreground">
               AIが生成した下書きは必ず担当者が編集・承認してから保存します。
             </p>
