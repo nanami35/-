@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Plus, Rocket } from "lucide-react";
 import { requireUser } from "@/lib/auth";
-import { getInitiatives, getStore, getStores, getUserName } from "@/lib/data";
+import { getInitiatives, getStoreMap, getStores, getUserMap } from "@/lib/data";
 import {
   INITIATIVE_CATEGORIES,
   INITIATIVE_STATUS,
@@ -49,14 +49,19 @@ export default async function InitiativesPage({
   const status = sp.status ?? "";
   const category = sp.category ?? "";
 
-  let initiatives = getInitiatives();
+  let initiatives = await getInitiatives();
   if (store) initiatives = initiatives.filter((i) => i.storeId === store);
   if (status)
     initiatives = initiatives.filter((i) => i.status === (status as InitiativeStatus));
   if (category) initiatives = initiatives.filter((i) => i.category === category);
   if (q) initiatives = initiatives.filter((i) => i.name.toLowerCase().includes(q));
 
-  const storeOptions = getStores().map((s) => ({ value: s.id, label: s.name }));
+  const [stores, storeMap, userMap] = await Promise.all([
+    getStores(),
+    getStoreMap(),
+    getUserMap(),
+  ]);
+  const storeOptions = stores.map((s) => ({ value: s.id, label: s.name }));
 
   return (
     <div className="space-y-6">
@@ -118,7 +123,7 @@ export default async function InitiativesPage({
                           {i.name}
                         </Link>
                       </TD>
-                      <TD className="text-sm">{getStore(i.storeId)?.name ?? "—"}</TD>
+                      <TD className="text-sm">{storeMap.get(i.storeId)?.name ?? "—"}</TD>
                       <TD>
                         <Badge tone="navy">{i.category}</Badge>
                       </TD>
@@ -140,7 +145,7 @@ export default async function InitiativesPage({
                       <TD>
                         <InitiativeStatusBadge value={i.status} />
                       </TD>
-                      <TD className="text-sm">{getUserName(i.assigneeId)}</TD>
+                      <TD className="text-sm">{userMap.get(i.assigneeId ?? "")?.name ?? "未割当"}</TD>
                       <TD className="whitespace-nowrap text-xs text-muted-foreground">
                         {formatDate(i.startDate)}〜{formatDate(i.endDate)}
                       </TD>

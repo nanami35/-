@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { FileText, Plus } from "lucide-react";
 import { requireUser } from "@/lib/auth";
-import { getReports, getStore, getStores } from "@/lib/data";
+import { getReports, getStores, getStoreMap } from "@/lib/data";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { FilterSelect } from "@/components/ui/filter-select";
@@ -20,11 +20,12 @@ export default async function ReportsPage({
   const sp = await searchParams;
   const store = sp.store ?? "";
 
-  let reports = getReports();
+  let reports = await getReports();
   if (store) reports = reports.filter((r) => r.storeId === store);
   reports = reports.slice().sort((a, b) => b.month.localeCompare(a.month));
 
-  const storeOptions = getStores().map((s) => ({ value: s.id, label: s.name }));
+  const [storeList, storeMap] = await Promise.all([getStores(), getStoreMap()]);
+  const storeOptions = storeList.map((s) => ({ value: s.id, label: s.name }));
 
   return (
     <div className="space-y-6">
@@ -66,7 +67,7 @@ export default async function ReportsPage({
                 {reports.map((r) => (
                   <TR key={r.id}>
                     <TD className="font-medium text-navy-800">
-                      {getStore(r.storeId)?.name ?? "—"}
+                      {storeMap.get(r.storeId)?.name ?? "—"}
                     </TD>
                     <TD className="text-sm">{formatMonth(`${r.month}-01`)}</TD>
                     <TD>

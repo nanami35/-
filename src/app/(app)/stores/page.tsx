@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { requireUser } from "@/lib/auth";
-import { getStores, getClients, getClient, getUserName } from "@/lib/data";
+import { getStores, getClients, getClientMap, getUserMap } from "@/lib/data";
 import { SUPPORT_PHASES } from "@/lib/constants";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,12 +26,15 @@ export default async function StoresPage({
   const clientFilter = sp.client ?? "";
   const phaseFilter = sp.phase ?? "";
 
-  const clientOptions = getClients()
+  const clients = await getClients();
+  const clientOptions = clients
     .slice()
     .sort((a, b) => a.name.localeCompare(b.name, "ja"))
     .map((c) => ({ value: c.id, label: c.name }));
 
-  let stores = getStores();
+  const [clientMap, userMap] = await Promise.all([getClientMap(), getUserMap()]);
+
+  let stores = await getStores();
   if (q) stores = stores.filter((s) => s.name.toLowerCase().includes(q));
   if (clientFilter) stores = stores.filter((s) => s.clientId === clientFilter);
   if (phaseFilter) stores = stores.filter((s) => s.phase === phaseFilter);
@@ -86,13 +89,13 @@ export default async function StoresPage({
                         {s.name}
                       </Link>
                     </TD>
-                    <TD>{getClient(s.clientId)?.name ?? "—"}</TD>
+                    <TD>{clientMap.get(s.clientId)?.name ?? "—"}</TD>
                     <TD>{s.businessType}</TD>
                     <TD>{s.genre}</TD>
                     <TD>
                       <Badge tone="info">{s.phase}</Badge>
                     </TD>
-                    <TD>{getUserName(s.consultantId)}</TD>
+                    <TD>{userMap.get(s.consultantId)?.name ?? "未割当"}</TD>
                     <TD className="text-right">{formatCurrency(s.monthlySales)}</TD>
                     <TD className="text-right">{formatCurrency(s.avgSpend)}</TD>
                     <TD className="whitespace-nowrap text-xs text-muted-foreground">

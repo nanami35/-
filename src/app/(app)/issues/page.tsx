@@ -1,6 +1,6 @@
 import { AlertTriangle, Info } from "lucide-react";
 import { requireUser } from "@/lib/auth";
-import { getIssues, getStore, getStores, getUserName, priorityScore } from "@/lib/data";
+import { getIssues, getStoreMap, getStores, getUserMap, priorityScore } from "@/lib/data";
 import {
   ISSUE_CATEGORIES,
   ISSUE_STATUS,
@@ -48,7 +48,7 @@ export default async function IssuesPage({
   const status = sp.status ?? "";
   const category = sp.category ?? "";
 
-  let issues = getIssues();
+  let issues = await getIssues();
   if (store) issues = issues.filter((i) => i.storeId === store);
   if (status) issues = issues.filter((i) => i.status === (status as IssueStatus));
   if (category) issues = issues.filter((i) => i.category === category);
@@ -58,7 +58,12 @@ export default async function IssuesPage({
     .map((i) => ({ issue: i, score: priorityScore(i) }))
     .sort((a, b) => b.score - a.score);
 
-  const storeOptions = getStores().map((s) => ({ value: s.id, label: s.name }));
+  const [stores, storeMap, userMap] = await Promise.all([
+    getStores(),
+    getStoreMap(),
+    getUserMap(),
+  ]);
+  const storeOptions = stores.map((s) => ({ value: s.id, label: s.name }));
 
   return (
     <div className="space-y-6">
@@ -126,7 +131,7 @@ export default async function IssuesPage({
                       </TD>
                       <TD className="font-medium text-navy-800">{issue.title}</TD>
                       <TD className="text-sm">
-                        {getStore(issue.storeId)?.name ?? STORE_NONE}
+                        {storeMap.get(issue.storeId)?.name ?? STORE_NONE}
                       </TD>
                       <TD>
                         <Badge tone="navy">{issue.category}</Badge>
@@ -139,7 +144,7 @@ export default async function IssuesPage({
                       <TD>
                         <IssueStatusBadge value={issue.status} />
                       </TD>
-                      <TD className="text-sm">{getUserName(issue.assigneeId)}</TD>
+                      <TD className="text-sm">{userMap.get(issue.assigneeId ?? "")?.name ?? "未割当"}</TD>
                       <TD
                         className={`whitespace-nowrap text-xs ${
                           overdue ? "font-semibold text-danger" : "text-muted-foreground"

@@ -84,61 +84,82 @@ export default async function StoreDetailPage({
   const sp = await searchParams;
   const tab = sp.tab ?? "basic";
 
-  const store = getStore(id);
+  const store = await getStore(id);
   if (!store) notFound();
 
-  const client = getClient(store.clientId);
-  const latest = getLatestDiagnosis(id);
+  const client = await getClient(store.clientId);
+  const consultantName = await getUserName(store.consultantId);
+  const latest = await getLatestDiagnosis(id);
   const total = latest ? computeDiagnosis(latest.scores).total : null;
+
+  const [
+    hearing,
+    diagnoses,
+    issues,
+    kpi,
+    initiatives,
+    reports,
+    competitors,
+    strategy,
+  ] = await Promise.all([
+    getHearingByStore(id),
+    getDiagnosesByStore(id),
+    getIssuesByStore(id),
+    getKpiByStore(id),
+    getInitiativesByStore(id),
+    getReportsByStore(id),
+    getCompetitorsByStore(id),
+    getStrategyByStore(id),
+  ]);
 
   const relatedCards = [
     {
       href: `/hearings?store=${id}`,
       label: "ヒアリング",
       icon: <ClipboardList className="h-5 w-5" />,
-      count: getHearingByStore(id) ? 1 : 0,
+      count: hearing ? 1 : 0,
     },
     {
       href: `/diagnoses?store=${id}`,
       label: "店舗診断",
       icon: <Gauge className="h-5 w-5" />,
-      count: getDiagnosesByStore(id).length,
+      count: diagnoses.length,
     },
     {
       href: `/issues?store=${id}`,
       label: "課題",
       icon: <AlertTriangle className="h-5 w-5" />,
-      count: getIssuesByStore(id).length,
+      count: issues.length,
     },
     {
       href: `/kpi?store=${id}`,
       label: "KPI",
       icon: <LineChart className="h-5 w-5" />,
-      count: getKpiByStore(id).length,
+      count: kpi.length,
     },
     {
       href: `/initiatives?store=${id}`,
       label: "施策",
       icon: <Rocket className="h-5 w-5" />,
-      count: getInitiativesByStore(id).length,
+      count: initiatives.length,
     },
     {
       href: `/reports?store=${id}`,
       label: "月次レポート",
       icon: <FileText className="h-5 w-5" />,
-      count: getReportsByStore(id).length,
+      count: reports.length,
     },
     {
       href: `/competitors?store=${id}`,
       label: "競合",
       icon: <Swords className="h-5 w-5" />,
-      count: getCompetitorsByStore(id).length,
+      count: competitors.length,
     },
     {
       href: `/strategies?store=${id}`,
       label: "戦略",
       icon: <Target className="h-5 w-5" />,
-      count: getStrategyByStore(id) ? 1 : 0,
+      count: strategy ? 1 : 0,
     },
   ];
 
@@ -160,7 +181,7 @@ export default async function StoreDetailPage({
       <PageHeader title={store.name}>
         <div className="flex flex-wrap items-center gap-2">
           <Badge tone="info">{store.phase}</Badge>
-          <Badge tone="muted">担当: {getUserName(store.consultantId)}</Badge>
+          <Badge tone="muted">担当: {consultantName}</Badge>
         </div>
       </PageHeader>
 
@@ -304,7 +325,7 @@ export default async function StoreDetailPage({
               columns={2}
               items={[
                 { label: "支援開始日", value: formatDate(store.supportStartDate) },
-                { label: "担当者", value: getUserName(store.consultantId) },
+                { label: "担当者", value: consultantName },
                 { label: "現在のフェーズ", value: <Badge tone="info">{store.phase}</Badge> },
                 { label: "重要課題", value: store.keyIssue ?? null, full: true },
                 { label: "今月の重点施策", value: store.monthlyFocus ?? null, full: true },

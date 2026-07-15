@@ -15,10 +15,9 @@ export default async function MarketPage({
 }) {
   await requireUser();
   const sp = await searchParams;
-  const stores = getStores();
+  const stores = await getStores();
   const storeId = sp.store ?? "store_hikari";
-  const store = getStore(storeId);
-  const m = getMarketByStore(storeId);
+  const [store, m] = await Promise.all([getStore(storeId), getMarketByStore(storeId)]);
 
   return (
     <div className="space-y-6">

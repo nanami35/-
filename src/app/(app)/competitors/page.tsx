@@ -28,10 +28,12 @@ export default async function CompetitorsPage({
 }) {
   await requireUser();
   const sp = await searchParams;
-  const stores = getStores();
+  const stores = await getStores();
   const storeId = sp.store ?? "store_hikari";
-  const store = getStore(storeId);
-  const comps = getCompetitorsByStore(storeId);
+  const [store, comps] = await Promise.all([
+    getStore(storeId),
+    getCompetitorsByStore(storeId),
+  ]);
 
   return (
     <div className="space-y-6">

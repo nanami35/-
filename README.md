@@ -107,6 +107,12 @@ npm run build       # 本番ビルド
 
 ## Supabase / データベース接続手順
 
+> **動作モードは環境変数で自動切替**されます（UI は不変）。
+> `DATABASE_URL` を設定するとデータソースが Supabase(PostgreSQL/Prisma) に、
+> `NEXT_PUBLIC_SUPABASE_URL`＋`ANON_KEY` を設定すると認証が Supabase Auth に切り替わります。
+> 未設定ならサンプルデータ＋デモログインで動作します。
+> 詳細な手順・**全環境変数の説明**・RLS・データ移行は **[`docs/09-supabase-setup.md`](docs/09-supabase-setup.md)** を参照。
+
 1. [Supabase](https://supabase.com/) でプロジェクトを作成。
 2. `.env.example` を `.env` にコピーし、`DATABASE_URL` / `DIRECT_URL` / `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` を設定。
 3. スキーマを反映:
@@ -118,11 +124,13 @@ npm run build       # 本番ビルド
    ```bash
    npm run db:seed
    ```
-5. **Row Level Security (RLS)** を有効化し、`organization_id` によるテナント分離ポリシーを設定
-   （詳細は `docs/08-implementation-notes.md` / `docs/05-er-diagram.md` を参照）。
+5. **Row Level Security (RLS)** と認証連携は `supabase/migrations/0002_auth_and_rls.sql` を適用（`npm run db:push` でも反映されます）。
+   `organization_id` によるテナント分離ポリシー、テンプレート系の管理者限定書込、
+   auth ユーザーのメール自動リンクトリガーを含みます。
 
-> データアクセスは `src/lib/data.ts` に集約されています。
-> 本番移行時はこの層の内部を Prisma/Supabase クエリへ差し替えることで、UI を変更せず移行できます。
+> データアクセスは `src/lib/data.ts`（async）＋ `src/lib/repo/`（mock / prisma）に集約。
+> 認証は `src/lib/auth.ts`＋`src/lib/supabase/` に集約。
+> いずれも環境変数で実装が切り替わり、**画面（UI）は一切変更されません**。
 
 ---
 
@@ -133,7 +141,11 @@ npm run build       # 本番ビルド
 ├── docs/                     # 要件定義・画面一覧・ER図・ロードマップ 等
 ├── prisma/
 │   ├── schema.prisma         # マルチテナントのデータモデル（全テーブル）
-│   └── seed.ts               # サンプルデータ投入
+│   └── seed.ts               # サンプルデータ投入（Supabase へ移行）
+├── supabase/
+│   └── migrations/
+│       ├── 0001_init.sql            # スキーマ（Prisma から生成）
+│       └── 0002_auth_and_rls.sql    # 認証連携 + RLS ポリシー
 ├── src/
 │   ├── app/
 │   │   ├── (app)/            # 認証必須のアプリ画面（共通レイアウト）
@@ -154,10 +166,15 @@ npm run build       # 本番ビルド
 │   │   └── status-badge.tsx  # ステータス → バッジ変換
 │   ├── lib/
 │   │   ├── constants.ts      # ロール/ナビ/診断項目/KPI定義/各種選択肢
-│   │   ├── data.ts           # データアクセス層（本番はここを差し替え）
+│   │   ├── data.ts           # データアクセス層（async・org スコープ）
+│   │   ├── repo/             # リポジトリ抽象（mock-repo / prisma-repo）
+│   │   ├── supabase/         # Supabase クライアント（server / client）
+│   │   ├── prisma.ts         # Prisma シングルトン（遅延初期化）
+│   │   ├── env.ts            # 動作モード判定（DB/Auth）
+│   │   ├── users.ts          # 認証ブートストラップ用ユーザー参照
 │   │   ├── sample-data.ts    # デモ用サンプルデータ
 │   │   ├── scoring.ts        # 診断スコア算出
-│   │   ├── auth.ts           # 認証（デモ）
+│   │   ├── auth.ts           # 認証（Supabase Auth / デモ）
 │   │   ├── csv.ts            # CSV 入出力
 │   │   └── utils.ts          # 整形・計算ヘルパー
 │   └── types/                # ドメイン型定義

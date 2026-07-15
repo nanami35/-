@@ -24,7 +24,7 @@ export default async function UsersPage() {
     );
   }
 
-  const users = getUsers();
+  const users = await getUsers();
 
   return (
     <div className="space-y-6">

@@ -4,7 +4,7 @@ import { ArrowLeft, FileText } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import {
   getClient,
-  getUserName,
+  getUserMap,
   getStoresByClient,
   getMeetings,
 } from "@/lib/data";
@@ -37,11 +37,15 @@ export default async function ClientDetailPage({
   const sp = await searchParams;
   const tab = sp.tab ?? "overview";
 
-  const client = getClient(id);
+  const client = await getClient(id);
   if (!client) notFound();
 
-  const stores = getStoresByClient(id);
-  const meetings = getMeetings().filter((m) => m.clientId === id);
+  const [userMap, stores, allMeetings] = await Promise.all([
+    getUserMap(),
+    getStoresByClient(id),
+    getMeetings(),
+  ]);
+  const meetings = allMeetings.filter((m) => m.clientId === id);
 
   return (
     <div className="space-y-6">
@@ -98,7 +102,7 @@ export default async function ClientDetailPage({
                     label: "契約状況",
                     value: CONTRACT_STATUS[client.contractStatus],
                   },
-                  { label: "担当コンサルタント", value: getUserName(client.consultantId) },
+                  { label: "担当コンサルタント", value: userMap.get(client.consultantId)?.name ?? "未割当" },
                   { label: "契約開始日", value: formatDate(client.contractStartDate) },
                   { label: "契約終了日", value: formatDate(client.contractEndDate) },
                   { label: "契約プラン", value: client.plan ?? null },
@@ -166,7 +170,7 @@ export default async function ClientDetailPage({
                       <TD>
                         <Badge tone="info">{s.phase}</Badge>
                       </TD>
-                      <TD>{getUserName(s.consultantId)}</TD>
+                      <TD>{userMap.get(s.consultantId)?.name ?? "未割当"}</TD>
                       <TD className="text-right">{formatCurrency(s.monthlySales)}</TD>
                       <TD className="text-right">{formatCurrency(s.avgSpend)}</TD>
                     </TR>

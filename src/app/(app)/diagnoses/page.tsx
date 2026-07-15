@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { requireUser } from "@/lib/auth";
-import { getDiagnoses, getStores, getStore, getUserName } from "@/lib/data";
+import { getDiagnoses, getStores, getStoreMap, getUserMap } from "@/lib/data";
 import { computeDiagnosis } from "@/lib/scoring";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent } from "@/components/ui/card";
@@ -33,10 +33,17 @@ export default async function DiagnosesPage({
   const sp = await searchParams;
   const storeFilter = sp.store ?? "";
 
-  let diagnoses = getDiagnoses();
+  const [allDiagnoses, allStores, storeMap, userMap] = await Promise.all([
+    getDiagnoses(),
+    getStores(),
+    getStoreMap(),
+    getUserMap(),
+  ]);
+
+  let diagnoses = allDiagnoses;
   if (storeFilter) diagnoses = diagnoses.filter((d) => d.storeId === storeFilter);
 
-  const storeOptions = getStores()
+  const storeOptions = allStores
     .slice()
     .sort((a, b) => a.name.localeCompare(b.name, "ja"))
     .map((s) => ({ value: s.id, label: s.name }));
@@ -86,13 +93,13 @@ export default async function DiagnosesPage({
                           href={`/diagnoses/${d.id}`}
                           className="font-medium text-navy-700 hover:text-gold-600 hover:underline"
                         >
-                          {getStore(d.storeId)?.name ?? "—"}
+                          {storeMap.get(d.storeId)?.name ?? "—"}
                         </Link>
                       </TD>
                       <TD className="whitespace-nowrap text-sm text-muted-foreground">
                         {formatDate(d.date)}
                       </TD>
-                      <TD>{getUserName(d.evaluatorId)}</TD>
+                      <TD>{userMap.get(d.evaluatorId)?.name ?? "未割当"}</TD>
                       <TD>
                         <div className="flex items-center gap-2">
                           <span className="text-lg font-bold text-navy-800">{result.total}</span>

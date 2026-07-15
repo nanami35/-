@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { requireUser } from "@/lib/auth";
-import { getStores, getClient, getHearingByStore } from "@/lib/data";
+import { getStores, getHearings, getClientMap } from "@/lib/data";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { SearchInput } from "@/components/ui/search-input";
@@ -22,13 +22,19 @@ export default async function HearingsPage({
   const q = (sp.q ?? "").trim().toLowerCase();
   const storeFilter = sp.store ?? "";
 
-  let stores = getStores()
+  const [allStores, hearings, clientMap] = await Promise.all([
+    getStores(),
+    getHearings(),
+    getClientMap(),
+  ]);
+
+  let stores = allStores
     .slice()
     .sort((a, b) => a.name.localeCompare(b.name, "ja"));
   if (storeFilter) stores = stores.filter((s) => s.id === storeFilter);
   if (q) stores = stores.filter((s) => s.name.toLowerCase().includes(q));
 
-  const storeOptions = getStores()
+  const storeOptions = allStores
     .slice()
     .sort((a, b) => a.name.localeCompare(b.name, "ja"))
     .map((s) => ({ value: s.id, label: s.name }));
@@ -66,8 +72,8 @@ export default async function HearingsPage({
               </THead>
               <TBody>
                 {stores.map((s) => {
-                  const hearing = getHearingByStore(s.id);
-                  const clientName = getClient(s.clientId)?.name ?? "—";
+                  const hearing = hearings.find((h) => h.storeId === s.id);
+                  const clientName = clientMap.get(s.clientId)?.name ?? "—";
                   return (
                     <TR key={s.id}>
                       <TD>

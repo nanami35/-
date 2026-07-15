@@ -4,9 +4,7 @@ import {
   CalendarClock, Trophy, AlertTriangle, ClipboardX, Users,
 } from "lucide-react";
 import { requireUser } from "@/lib/auth";
-import {
-  getDashboardMetrics, getClient, getUserName,
-} from "@/lib/data";
+import { getDashboardMetrics, getClientMap } from "@/lib/data";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -18,7 +16,7 @@ import { formatCurrency, formatDate, formatPercent } from "@/lib/utils";
 
 export default async function DashboardPage() {
   const user = await requireUser();
-  const m = getDashboardMetrics();
+  const [m, clientMap] = await Promise.all([getDashboardMetrics(), getClientMap()]);
 
   return (
     <div className="space-y-6">
@@ -71,7 +69,7 @@ export default async function DashboardPage() {
                       <Link href={`/stores/${r.store.id}`} className="font-medium text-navy-700 hover:text-gold-600 hover:underline">
                         {r.store.name}
                       </Link>
-                      <p className="text-xs text-muted-foreground">{getClient(r.store.clientId)?.name}</p>
+                      <p className="text-xs text-muted-foreground">{clientMap.get(r.store.clientId)?.name}</p>
                     </TD>
                     <TD className="text-right font-medium">
                       <span className={r.improvement >= 0 ? "text-success" : "text-danger"}>

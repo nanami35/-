@@ -69,9 +69,9 @@ export default async function DemandSupplyPage({
 }) {
   await requireUser();
   const sp = await searchParams;
-  const stores = getStores();
+  const stores = await getStores();
   const storeId = sp.store ?? "store_hikari";
-  const store = getStore(storeId);
+  const store = await getStore(storeId);
   const entries = ILLUSTRATIVE[storeId];
 
   return (

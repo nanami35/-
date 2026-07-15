@@ -15,7 +15,7 @@ export default async function KnowledgePage({
 }) {
   await requireUser();
   const sp = await searchParams;
-  const all = getKnowledgeCases();
+  const all = await getKnowledgeCases();
 
   const businessTypes = Array.from(new Set(all.map((c) => c.businessType)));
   const tags = Array.from(new Set(all.flatMap((c) => c.tags)));

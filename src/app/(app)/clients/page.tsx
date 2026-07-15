@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { requireUser } from "@/lib/auth";
-import { getClients, getUserName, getStoresByClient } from "@/lib/data";
+import { getClients, getUserMap, getStores } from "@/lib/data";
 import { CONTRACT_STATUS, type ContractStatus } from "@/lib/constants";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent } from "@/components/ui/card";
@@ -28,12 +28,14 @@ export default async function ClientsPage({
   const q = (sp.q ?? "").trim().toLowerCase();
   const status = sp.status ?? "";
 
-  let clients = getClients();
+  const [userMap, stores] = await Promise.all([getUserMap(), getStores()]);
+
+  let clients = await getClients();
   if (q) {
     clients = clients.filter(
       (c) =>
         c.name.toLowerCase().includes(q) ||
-        getUserName(c.consultantId).toLowerCase().includes(q)
+        (userMap.get(c.consultantId)?.name ?? "未割当").toLowerCase().includes(q)
     );
   }
   if (status) {
@@ -92,13 +94,13 @@ export default async function ClientsPage({
                         {c.name}
                       </Link>
                     </TD>
-                    <TD>{getUserName(c.consultantId)}</TD>
+                    <TD>{userMap.get(c.consultantId)?.name ?? "未割当"}</TD>
                     <TD>
                       <ContractStatusBadge value={c.contractStatus} />
                     </TD>
                     <TD>{c.plan ?? "—"}</TD>
                     <TD className="text-right">{formatCurrency(c.monthlyFee)}</TD>
-                    <TD className="text-right">{getStoresByClient(c.id).length}</TD>
+                    <TD className="text-right">{stores.filter((s) => s.clientId === c.id).length}</TD>
                     <TD className="whitespace-nowrap text-xs text-muted-foreground">
                       {formatDate(c.contractStartDate)}〜{formatDate(c.contractEndDate)}
                     </TD>

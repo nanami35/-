@@ -1,6 +1,6 @@
 import { Users, CalendarClock, Info, CheckSquare } from "lucide-react";
 import { requireUser } from "@/lib/auth";
-import { getMeetings, getStore, getClient, getStores } from "@/lib/data";
+import { getMeetings, getStores, getStoreMap, getClientMap } from "@/lib/data";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { SearchInput } from "@/components/ui/search-input";
@@ -8,7 +8,7 @@ import { FilterSelect } from "@/components/ui/filter-select";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
-import type { Meeting } from "@/types";
+import type { Meeting, Store, Client } from "@/types";
 
 /** ISO 文字列から HH:MM を取り出す（"2026-06-22T14:00:00.000Z" -> "14:00"） */
 function timeOf(datetime: string): string {
@@ -17,14 +17,18 @@ function timeOf(datetime: string): string {
 }
 
 /** 関連先ラベル（クライアント名 / 店舗名） */
-function relatedLabels(m: Meeting): string[] {
+function relatedLabels(
+  m: Meeting,
+  storeMap: Map<string, Store>,
+  clientMap: Map<string, Client>
+): string[] {
   const labels: string[] = [];
   if (m.clientId) {
-    const c = getClient(m.clientId);
+    const c = clientMap.get(m.clientId);
     if (c) labels.push(c.name);
   }
   if (m.storeId) {
-    const s = getStore(m.storeId);
+    const s = storeMap.get(m.storeId);
     if (s) labels.push(s.name);
   }
   return labels;
@@ -40,11 +44,16 @@ export default async function MeetingsPage({
   const q = (sp.q ?? "").trim().toLowerCase();
   const store = sp.store ?? "";
 
-  let meetings = getMeetings();
+  let meetings = await getMeetings();
   if (store) meetings = meetings.filter((m) => m.storeId === store);
   if (q) meetings = meetings.filter((m) => (m.agenda ?? "").toLowerCase().includes(q));
 
-  const storeOptions = getStores().map((s) => ({ value: s.id, label: s.name }));
+  const [storeList, storeMap, clientMap] = await Promise.all([
+    getStores(),
+    getStoreMap(),
+    getClientMap(),
+  ]);
+  const storeOptions = storeList.map((s) => ({ value: s.id, label: s.name }));
 
   return (
     <div className="space-y-6">
@@ -75,7 +84,7 @@ export default async function MeetingsPage({
       ) : (
         <ol className="relative space-y-6 border-l border-border pl-6">
           {meetings.map((m) => {
-            const related = relatedLabels(m);
+            const related = relatedLabels(m, storeMap, clientMap);
             const time = timeOf(m.datetime);
             return (
               <li key={m.id} className="relative">

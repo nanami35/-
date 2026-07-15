@@ -17,11 +17,11 @@ export default async function HearingDetailPage({
   await requireUser();
   const { id } = await params;
 
-  const hearing = getHearings().find((h) => h.id === id);
+  const hearing = (await getHearings()).find((h) => h.id === id);
   if (!hearing) notFound();
 
-  const store = getStore(hearing.storeId);
-  const clientName = store ? getClient(store.clientId)?.name : undefined;
+  const store = await getStore(hearing.storeId);
+  const clientName = store ? (await getClient(store.clientId))?.name : undefined;
 
   return (
     <div className="space-y-6">

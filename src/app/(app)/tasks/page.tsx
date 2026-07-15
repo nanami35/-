@@ -1,6 +1,6 @@
 import { ListChecks } from "lucide-react";
 import { requireUser } from "@/lib/auth";
-import { getTasks, getStore, getStores, getClient, getUserName, getUsers } from "@/lib/data";
+import { getTasks, getStores, getUsers, getUserMap, getStoreMap, getClientMap } from "@/lib/data";
 import { TASK_STATUS, PRIORITY, type TaskStatus, type Priority } from "@/lib/constants";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,7 +12,7 @@ import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import { TaskStatusBadge, PriorityBadge } from "@/components/status-badge";
 import { formatDate, isOverdue } from "@/lib/utils";
-import type { Task } from "@/types";
+import type { Task, Store, Client, User } from "@/types";
 
 const STATUS_OPTIONS = Object.entries(TASK_STATUS).map(([value, label]) => ({
   value,
@@ -34,9 +34,13 @@ const PRIORITY_CHIP: Record<Priority, string> = {
 };
 
 /** タスクの関連先（店舗名 or クライアント名）を返す */
-function relatedLabel(t: Task): string {
-  if (t.storeId) return getStore(t.storeId)?.name ?? "—";
-  if (t.clientId) return getClient(t.clientId)?.name ?? "—";
+function relatedLabel(
+  t: Task,
+  storeMap: Map<string, Store>,
+  clientMap: Map<string, Client>
+): string {
+  if (t.storeId) return storeMap.get(t.storeId)?.name ?? "—";
+  if (t.clientId) return clientMap.get(t.clientId)?.name ?? "—";
   return "—";
 }
 
@@ -75,14 +79,21 @@ export default async function TasksPage({
   const status = sp.status ?? "";
   const view = sp.view ?? "list";
 
-  let tasks = getTasks();
+  let tasks = await getTasks();
   if (store) tasks = tasks.filter((t) => t.storeId === store);
   if (assignee) tasks = tasks.filter((t) => t.assigneeId === assignee);
   if (status) tasks = tasks.filter((t) => t.status === (status as TaskStatus));
   if (q) tasks = tasks.filter((t) => t.title.toLowerCase().includes(q));
 
-  const storeOptions = getStores().map((s) => ({ value: s.id, label: s.name }));
-  const assigneeOptions = getUsers()
+  const [storeList, users, userMap, storeMap, clientMap] = await Promise.all([
+    getStores(),
+    getUsers(),
+    getUserMap(),
+    getStoreMap(),
+    getClientMap(),
+  ]);
+  const storeOptions = storeList.map((s) => ({ value: s.id, label: s.name }));
+  const assigneeOptions = users
     .filter((u) => u.role !== "client")
     .map((u) => ({ value: u.id, label: u.name }));
 
@@ -110,11 +121,16 @@ export default async function TasksPage({
           icon={<ListChecks className="h-6 w-6" />}
         />
       ) : view === "kanban" ? (
-        <KanbanView tasks={tasks} />
+        <KanbanView tasks={tasks} userMap={userMap} />
       ) : view === "calendar" ? (
         <CalendarView tasks={tasks} />
       ) : (
-        <ListView tasks={tasks} />
+        <ListView
+          tasks={tasks}
+          userMap={userMap}
+          storeMap={storeMap}
+          clientMap={clientMap}
+        />
       )}
     </div>
   );
@@ -123,7 +139,17 @@ export default async function TasksPage({
 /* ============================================================
  * リストビュー
  * ========================================================== */
-function ListView({ tasks }: { tasks: Task[] }) {
+function ListView({
+  tasks,
+  userMap,
+  storeMap,
+  clientMap,
+}: {
+  tasks: Task[];
+  userMap: Map<string, User>;
+  storeMap: Map<string, Store>;
+  clientMap: Map<string, Client>;
+}) {
   return (
     <Card>
       <CardContent className="p-0">
@@ -161,7 +187,7 @@ function ListView({ tasks }: { tasks: Task[] }) {
                       )}
                     </div>
                   </TD>
-                  <TD className="text-sm">{getUserName(t.assigneeId)}</TD>
+                  <TD className="text-sm">{userMap.get(t.assigneeId ?? "")?.name ?? "未割当"}</TD>
                   <TD
                     className={`whitespace-nowrap text-xs ${
                       overdue ? "font-semibold text-danger" : "text-muted-foreground"
@@ -175,7 +201,7 @@ function ListView({ tasks }: { tasks: Task[] }) {
                   <TD>
                     <TaskStatusBadge value={t.status} />
                   </TD>
-                  <TD className="text-sm">{relatedLabel(t)}</TD>
+                  <TD className="text-sm">{relatedLabel(t, storeMap, clientMap)}</TD>
                 </TR>
               );
             })}
@@ -189,7 +215,13 @@ function ListView({ tasks }: { tasks: Task[] }) {
 /* ============================================================
  * カンバンビュー
  * ========================================================== */
-function KanbanView({ tasks }: { tasks: Task[] }) {
+function KanbanView({
+  tasks,
+  userMap,
+}: {
+  tasks: Task[];
+  userMap: Map<string, User>;
+}) {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
       {(Object.entries(TASK_STATUS) as [TaskStatus, string][]).map(([key, label]) => {
@@ -217,7 +249,7 @@ function KanbanView({ tasks }: { tasks: Task[] }) {
                       <div className="mt-2 flex items-center justify-between gap-2">
                         <div className="flex items-center gap-1.5">
                           <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-navy-100 text-xs font-bold text-navy-600">
-                            {getUserName(t.assigneeId).charAt(0)}
+                            {(userMap.get(t.assigneeId ?? "")?.name ?? "未割当").charAt(0)}
                           </span>
                           <PriorityBadge value={t.priority} />
                         </div>

@@ -24,10 +24,11 @@ export default async function InitiativeDetailPage({
 }) {
   await requireUser();
   const { id } = await params;
-  const initiative = getInitiative(id);
+  const initiative = await getInitiative(id);
   if (!initiative) notFound();
 
-  const store = getStore(initiative.storeId);
+  const store = await getStore(initiative.storeId);
+  const assigneeName = await getUserName(initiative.assigneeId);
   const progress =
     initiative.actualValue != null && initiative.targetValue != null
       ? achievementRate(initiative.actualValue, initiative.targetValue) ?? 0
@@ -42,7 +43,7 @@ export default async function InitiativeDetailPage({
     { label: "開始日", value: formatDate(initiative.startDate) },
     { label: "終了日", value: formatDate(initiative.endDate) },
     { label: "予算", value: formatCurrency(initiative.budget) },
-    { label: "担当者", value: getUserName(initiative.assigneeId) },
+    { label: "担当者", value: assigneeName },
     { label: "KPI", value: kpiLabel(initiative.kpiKey) },
     { label: "目標値", value: formatNumber(initiative.targetValue) },
     { label: "実績値", value: formatNumber(initiative.actualValue) },

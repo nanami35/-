@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser, getDemoAccounts } from "@/lib/auth";
+import { isSupabaseAuthConfigured } from "@/lib/env";
+import { SupabaseLoginForm } from "@/components/auth/supabase-login-form";
 import { ROLE_LABELS } from "@/lib/constants";
 
 export default async function LoginPage({
@@ -11,7 +13,8 @@ export default async function LoginPage({
   if (user) redirect("/dashboard");
 
   const { error } = await searchParams;
-  const accounts = getDemoAccounts();
+  const supabaseMode = isSupabaseAuthConfigured();
+  const accounts = supabaseMode ? [] : await getDemoAccounts();
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-navy-800 p-4">
@@ -29,7 +32,9 @@ export default async function LoginPage({
         <div className="rounded-2xl bg-white p-6 shadow-xl">
           <h2 className="mb-1 text-lg font-semibold text-navy-800">ログイン</h2>
           <p className="mb-4 text-sm text-muted-foreground">
-            デモアカウントを選択してログインしてください。
+            {supabaseMode
+              ? "メールアドレスとパスワードでログインしてください。"
+              : "デモアカウントを選択してログインしてください。"}
           </p>
 
           {error && (
@@ -38,35 +43,41 @@ export default async function LoginPage({
             </div>
           )}
 
-          <form action="/api/login" method="post" className="space-y-2">
-            {accounts.map((acc) => (
-              <button
-                key={acc.id}
-                type="submit"
-                name="userId"
-                value={acc.id}
-                className="flex w-full items-center gap-3 rounded-xl border border-border p-3 text-left transition-colors hover:border-navy-400 hover:bg-navy-50"
-              >
-                <span
-                  className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold text-white"
-                  style={{ backgroundColor: acc.avatarColor ?? "#1A2B4A" }}
+          {supabaseMode ? (
+            <SupabaseLoginForm />
+          ) : (
+            <form action="/api/login" method="post" className="space-y-2">
+              {accounts.map((acc) => (
+                <button
+                  key={acc.id}
+                  type="submit"
+                  name="userId"
+                  value={acc.id}
+                  className="flex w-full items-center gap-3 rounded-xl border border-border p-3 text-left transition-colors hover:border-navy-400 hover:bg-navy-50"
                 >
-                  {acc.name.charAt(0)}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block font-medium text-navy-800">{acc.name}</span>
-                  <span className="block text-xs text-muted-foreground">
-                    {ROLE_LABELS[acc.role]}・{acc.title}
+                  <span
+                    className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold text-white"
+                    style={{ backgroundColor: acc.avatarColor ?? "#1A2B4A" }}
+                  >
+                    {acc.name.charAt(0)}
                   </span>
-                </span>
-                <span className="text-xs font-medium text-gold-600">ログイン →</span>
-              </button>
-            ))}
-          </form>
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-medium text-navy-800">{acc.name}</span>
+                    <span className="block text-xs text-muted-foreground">
+                      {ROLE_LABELS[acc.role]}・{acc.title}
+                    </span>
+                  </span>
+                  <span className="text-xs font-medium text-gold-600">ログイン →</span>
+                </button>
+              ))}
+            </form>
+          )}
 
-          <p className="mt-4 text-center text-xs text-muted-foreground">
-            ※ 本番環境では Supabase Auth によるメール/パスワード認証に置き換わります。
-          </p>
+          {!supabaseMode && (
+            <p className="mt-4 text-center text-xs text-muted-foreground">
+              ※ 本番環境では Supabase Auth によるメール/パスワード認証に置き換わります。
+            </p>
+          )}
         </div>
       </div>
     </div>

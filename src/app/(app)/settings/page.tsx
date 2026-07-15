@@ -1,6 +1,6 @@
 import { ShieldCheck } from "lucide-react";
 import { requireUser } from "@/lib/auth";
-import { organizations } from "@/lib/sample-data";
+import { getOrganization } from "@/lib/data";
 import { ROLE_LABELS } from "@/lib/constants";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -9,7 +9,7 @@ import { formatDate } from "@/lib/utils";
 
 export default async function SettingsPage() {
   const user = await requireUser();
-  const org = organizations[0];
+  const org = await getOrganization();
 
   const SECURITY_NOTES = [
     "全画面で認証必須（未ログインはアクセス不可）",

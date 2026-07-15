@@ -1,126 +1,196 @@
 /**
- * データアクセス層。
- * 現在はサンプルデータ（インメモリ）を返す。
- * 本番では、この関数群の内部を Prisma/Supabase クエリに差し替えることで
- * UI 側を変更せずに移行できる。
+ * データアクセス層（org スコープ済み）。
  *
- * 全クエリは organizationId でスコープする前提（マルチテナント）。
- * MVP デモでは単一組織のみを扱う。
+ * リポジトリ抽象（@/lib/repo）の背後で、モック / Supabase(Prisma) を切り替える。
+ * 公開関数はすべて async。UI（サーバーコンポーネント）は await して利用する。
+ * 単一エンティティ取得や店舗別絞り込みは、ベースのリストから JS で導出する。
  */
-import * as db from "@/lib/sample-data";
-import { computeDiagnosis } from "@/lib/scoring";
+import { isDbConfigured } from "@/lib/env";
+import { getCurrentUser } from "@/lib/auth";
+import { mockRepo } from "@/lib/repo/mock-repo";
+import { createPrismaRepo } from "@/lib/repo/prisma-repo";
+import type { Repository } from "@/lib/repo/repository";
 import { isOverdue, achievementRate } from "@/lib/utils";
 import type {
-  Client, Store, User, Hearing, Diagnosis, Competitor, Issue,
+  Organization, Client, Store, User, Hearing, Diagnosis, Competitor, Issue,
   Strategy, KpiRecord, Initiative, SocialContent, Task, Meeting,
   MonthlyReport, KnowledgeCase, MarketAnalysis,
 } from "@/types";
 
-const notDeleted = <T extends { deletedAt?: string | null }>(rows: T[]) =>
-  rows.filter((r) => !r.deletedAt);
+/** 現在ユーザーの organization にスコープしたリポジトリを取得する */
+async function getRepo(): Promise<Repository> {
+  if (!isDbConfigured()) return mockRepo;
+  const user = await getCurrentUser();
+  // (app)/layout で未ログインは弾かれる。念のため空 org を渡すと結果は空になる。
+  return createPrismaRepo(user?.organizationId ?? "__none__");
+}
+
+/* ---------------- Organizations ---------------- */
+export async function getOrganization(): Promise<Organization | undefined> {
+  const repo = await getRepo();
+  return (await repo.getOrganizations())[0];
+}
 
 /* ---------------- Users ---------------- */
-export const getUsers = (): User[] => notDeleted(db.users);
-export const getUser = (id?: string): User | undefined =>
-  db.users.find((u) => u.id === id);
-export const getUserName = (id?: string): string =>
-  getUser(id)?.name ?? "未割当";
+export async function getUsers(): Promise<User[]> {
+  return (await getRepo()).getUsers();
+}
+export async function getUser(id?: string): Promise<User | undefined> {
+  if (!id) return undefined;
+  return (await getUsers()).find((u) => u.id === id);
+}
+export async function getUserName(id?: string): Promise<string> {
+  return (await getUser(id))?.name ?? "未割当";
+}
+/** 担当者名の解決を map 内で行うためのルックアップ */
+export async function getUserMap(): Promise<Map<string, User>> {
+  return new Map((await getUsers()).map((u) => [u.id, u]));
+}
 
 /* ---------------- Clients ---------------- */
-export const getClients = (): Client[] => notDeleted(db.clients);
-export const getClient = (id: string): Client | undefined =>
-  getClients().find((c) => c.id === id);
+export async function getClients(): Promise<Client[]> {
+  return (await getRepo()).getClients();
+}
+export async function getClient(id: string): Promise<Client | undefined> {
+  return (await getClients()).find((c) => c.id === id);
+}
+export async function getClientMap(): Promise<Map<string, Client>> {
+  return new Map((await getClients()).map((c) => [c.id, c]));
+}
 
 /* ---------------- Stores ---------------- */
-export const getStores = (): Store[] => notDeleted(db.stores);
-export const getStore = (id: string): Store | undefined =>
-  getStores().find((s) => s.id === id);
-export const getStoresByClient = (clientId: string): Store[] =>
-  getStores().filter((s) => s.clientId === clientId);
+export async function getStores(): Promise<Store[]> {
+  return (await getRepo()).getStores();
+}
+export async function getStore(id: string): Promise<Store | undefined> {
+  return (await getStores()).find((s) => s.id === id);
+}
+export async function getStoresByClient(clientId: string): Promise<Store[]> {
+  return (await getStores()).filter((s) => s.clientId === clientId);
+}
+export async function getStoreMap(): Promise<Map<string, Store>> {
+  return new Map((await getStores()).map((s) => [s.id, s]));
+}
 
 /* ---------------- Hearings ---------------- */
-export const getHearings = (): Hearing[] => notDeleted(db.hearings);
-export const getHearingByStore = (storeId: string): Hearing | undefined =>
-  getHearings().find((h) => h.storeId === storeId);
+export async function getHearings(): Promise<Hearing[]> {
+  return (await getRepo()).getHearings();
+}
+export async function getHearingByStore(storeId: string): Promise<Hearing | undefined> {
+  return (await getHearings()).find((h) => h.storeId === storeId);
+}
 
 /* ---------------- Diagnoses ---------------- */
-export const getDiagnoses = (): Diagnosis[] => notDeleted(db.diagnoses);
-export const getDiagnosesByStore = (storeId: string): Diagnosis[] =>
-  getDiagnoses()
-    .filter((d) => d.storeId === storeId)
-    .sort((a, b) => b.date.localeCompare(a.date));
-export const getDiagnosis = (id: string): Diagnosis | undefined =>
-  getDiagnoses().find((d) => d.id === id);
-export const getLatestDiagnosis = (storeId: string): Diagnosis | undefined =>
-  getDiagnosesByStore(storeId)[0];
+export async function getDiagnoses(): Promise<Diagnosis[]> {
+  return (await (await getRepo()).getDiagnoses()).sort((a, b) =>
+    b.date.localeCompare(a.date)
+  );
+}
+export async function getDiagnosesByStore(storeId: string): Promise<Diagnosis[]> {
+  return (await getDiagnoses()).filter((d) => d.storeId === storeId);
+}
+export async function getDiagnosis(id: string): Promise<Diagnosis | undefined> {
+  return (await getDiagnoses()).find((d) => d.id === id);
+}
+export async function getLatestDiagnosis(storeId: string): Promise<Diagnosis | undefined> {
+  return (await getDiagnosesByStore(storeId))[0];
+}
 
 /* ---------------- Competitors / Market ---------------- */
-export const getCompetitorsByStore = (storeId: string): Competitor[] =>
-  notDeleted(db.competitors).filter((c) => c.storeId === storeId);
-export const getMarketByStore = (storeId: string): MarketAnalysis | undefined =>
-  notDeleted(db.marketAnalyses).find((m) => m.storeId === storeId);
+export async function getCompetitorsByStore(storeId: string): Promise<Competitor[]> {
+  return (await (await getRepo()).getCompetitors()).filter((c) => c.storeId === storeId);
+}
+export async function getMarketByStore(storeId: string): Promise<MarketAnalysis | undefined> {
+  return (await (await getRepo()).getMarketAnalyses()).find((m) => m.storeId === storeId);
+}
 
 /* ---------------- Issues ---------------- */
-export const getIssues = (): Issue[] => notDeleted(db.issues);
-export const getIssuesByStore = (storeId: string): Issue[] =>
-  getIssues().filter((i) => i.storeId === storeId);
-export const getIssue = (id: string): Issue | undefined =>
-  getIssues().find((i) => i.id === id);
+export async function getIssues(): Promise<Issue[]> {
+  return (await getRepo()).getIssues();
+}
+export async function getIssuesByStore(storeId: string): Promise<Issue[]> {
+  return (await getIssues()).filter((i) => i.storeId === storeId);
+}
+export async function getIssue(id: string): Promise<Issue | undefined> {
+  return (await getIssues()).find((i) => i.id === id);
+}
 /** 優先度スコア = 影響度 × 緊急度 ×(4 - 難易度) */
 export const priorityScore = (i: Issue): number =>
   i.impact * i.urgency * (4 - i.difficulty);
 
 /* ---------------- Strategies ---------------- */
-export const getStrategyByStore = (storeId: string): Strategy | undefined =>
-  notDeleted(db.strategies).find((s) => s.storeId === storeId);
+export async function getStrategyByStore(storeId: string): Promise<Strategy | undefined> {
+  return (await (await getRepo()).getStrategies()).find((s) => s.storeId === storeId);
+}
 
 /* ---------------- KPI ---------------- */
-export const getKpiRecords = (): KpiRecord[] => notDeleted(db.kpiRecords);
-export const getKpiByStore = (storeId: string): KpiRecord[] =>
-  getKpiRecords().filter((k) => k.storeId === storeId);
-export const getKpiSeries = (storeId: string, kpiKey: string): KpiRecord[] =>
-  getKpiByStore(storeId)
+export async function getKpiRecords(): Promise<KpiRecord[]> {
+  return (await getRepo()).getKpiRecords();
+}
+export async function getKpiByStore(storeId: string): Promise<KpiRecord[]> {
+  return (await getKpiRecords()).filter((k) => k.storeId === storeId);
+}
+export async function getKpiSeries(storeId: string, kpiKey: string): Promise<KpiRecord[]> {
+  return (await getKpiByStore(storeId))
     .filter((k) => k.kpiKey === kpiKey)
     .sort((a, b) => a.month.localeCompare(b.month));
-export const getKpiMonths = (storeId: string): string[] =>
-  Array.from(new Set(getKpiByStore(storeId).map((k) => k.month))).sort();
+}
+export async function getKpiMonths(storeId: string): Promise<string[]> {
+  return Array.from(new Set((await getKpiByStore(storeId)).map((k) => k.month))).sort();
+}
 
 /* ---------------- Initiatives ---------------- */
-export const getInitiatives = (): Initiative[] => notDeleted(db.initiatives);
-export const getInitiativesByStore = (storeId: string): Initiative[] =>
-  getInitiatives().filter((i) => i.storeId === storeId);
-export const getInitiative = (id: string): Initiative | undefined =>
-  getInitiatives().find((i) => i.id === id);
+export async function getInitiatives(): Promise<Initiative[]> {
+  return (await getRepo()).getInitiatives();
+}
+export async function getInitiativesByStore(storeId: string): Promise<Initiative[]> {
+  return (await getInitiatives()).filter((i) => i.storeId === storeId);
+}
+export async function getInitiative(id: string): Promise<Initiative | undefined> {
+  return (await getInitiatives()).find((i) => i.id === id);
+}
 
 /* ---------------- Social ---------------- */
-export const getSocialContents = (): SocialContent[] =>
-  notDeleted(db.socialContents);
-export const getSocialByStore = (storeId: string): SocialContent[] =>
-  getSocialContents().filter((s) => s.storeId === storeId);
+export async function getSocialContents(): Promise<SocialContent[]> {
+  return (await getRepo()).getSocialContents();
+}
+export async function getSocialByStore(storeId: string): Promise<SocialContent[]> {
+  return (await getSocialContents()).filter((s) => s.storeId === storeId);
+}
 
 /* ---------------- Tasks ---------------- */
-export const getTasks = (): Task[] => notDeleted(db.tasks);
-export const getTask = (id: string): Task | undefined =>
-  getTasks().find((t) => t.id === id);
-export const getTasksByStore = (storeId: string): Task[] =>
-  getTasks().filter((t) => t.storeId === storeId);
+export async function getTasks(): Promise<Task[]> {
+  return (await getRepo()).getTasks();
+}
+export async function getTask(id: string): Promise<Task | undefined> {
+  return (await getTasks()).find((t) => t.id === id);
+}
+export async function getTasksByStore(storeId: string): Promise<Task[]> {
+  return (await getTasks()).filter((t) => t.storeId === storeId);
+}
 
 /* ---------------- Meetings ---------------- */
-export const getMeetings = (): Meeting[] =>
-  notDeleted(db.meetings).sort((a, b) => b.datetime.localeCompare(a.datetime));
+export async function getMeetings(): Promise<Meeting[]> {
+  return (await getRepo()).getMeetings();
+}
 
 /* ---------------- Reports ---------------- */
-export const getReports = (): MonthlyReport[] => notDeleted(db.monthlyReports);
-export const getReport = (id: string): MonthlyReport | undefined =>
-  getReports().find((r) => r.id === id);
-export const getReportsByStore = (storeId: string): MonthlyReport[] =>
-  getReports()
+export async function getReports(): Promise<MonthlyReport[]> {
+  return (await getRepo()).getMonthlyReports();
+}
+export async function getReport(id: string): Promise<MonthlyReport | undefined> {
+  return (await getReports()).find((r) => r.id === id);
+}
+export async function getReportsByStore(storeId: string): Promise<MonthlyReport[]> {
+  return (await getReports())
     .filter((r) => r.storeId === storeId)
     .sort((a, b) => b.month.localeCompare(a.month));
+}
 
 /* ---------------- Knowledge ---------------- */
-export const getKnowledgeCases = (): KnowledgeCase[] =>
-  notDeleted(db.knowledgeCases);
+export async function getKnowledgeCases(): Promise<KnowledgeCase[]> {
+  return (await getRepo()).getKnowledgeCases();
+}
 
 /* ============================================================
  * ダッシュボード用の集計
@@ -139,33 +209,50 @@ export interface DashboardMetrics {
   consultantLoad: { user: User; storeCount: number; openTasks: number }[];
 }
 
-export function getDashboardMetrics(filter?: {
+export async function getDashboardMetrics(filter?: {
   clientId?: string;
   storeId?: string;
   consultantId?: string;
-}): DashboardMetrics {
-  let stores = getStores();
+}): Promise<DashboardMetrics> {
+  const repo = await getRepo();
+  const [allStores, allClients, allTasks, allKpi, allUsers, allMeetings] =
+    await Promise.all([
+      repo.getStores(),
+      repo.getClients(),
+      repo.getTasks(),
+      repo.getKpiRecords(),
+      repo.getUsers(),
+      repo.getMeetings(),
+    ]);
+
+  let stores = allStores;
   if (filter?.clientId) stores = stores.filter((s) => s.clientId === filter.clientId);
   if (filter?.storeId) stores = stores.filter((s) => s.id === filter.storeId);
   if (filter?.consultantId)
     stores = stores.filter((s) => s.consultantId === filter.consultantId);
 
   const storeIds = new Set(stores.map((s) => s.id));
-  const clients = getClients().filter(
+  const clientById = new Map(allClients.map((c) => [c.id, c]));
+
+  const kpiSeries = (storeId: string, key: string): KpiRecord[] =>
+    allKpi
+      .filter((k) => k.storeId === storeId && k.kpiKey === key)
+      .sort((a, b) => a.month.localeCompare(b.month));
+
+  const clients = allClients.filter(
     (c) => c.contractStatus === "active" && stores.some((s) => s.clientId === c.id)
   );
 
-  const tasks = getTasks().filter((t) => !t.storeId || storeIds.has(t.storeId));
+  const tasks = allTasks.filter((t) => !t.storeId || storeIds.has(t.storeId));
   const doneTasks = tasks.filter((t) => t.status === "done").length;
   const taskCompletionRate = tasks.length ? (doneTasks / tasks.length) * 100 : 0;
   const overdueTasks = tasks.filter(
     (t) => t.status !== "done" && isOverdue(t.dueDate)
   ).length;
 
-  // 今月の売上改善額（最新月 - 前月 の合計）
   let monthlySalesImprovement = 0;
   for (const s of stores) {
-    const series = getKpiSeries(s.id, "sales");
+    const series = kpiSeries(s.id, "sales");
     if (series.length >= 2) {
       const last = series[series.length - 1]?.actual ?? 0;
       const prev = series[series.length - 2]?.actual ?? 0;
@@ -173,24 +260,21 @@ export function getDashboardMetrics(filter?: {
     }
   }
 
-  // 次回ミーティング
   const upcoming = stores
     .filter((s) => s.nextMeetingDate)
     .sort((a, b) => (a.nextMeetingDate ?? "").localeCompare(b.nextMeetingDate ?? ""))[0];
 
-  // KPI 未入力の店舗（当月データ無し）
   const currentMonth = "2026-07";
   const kpiMissingStores = stores.filter(
-    (s) => !getKpiByStore(s.id).some((k) => k.month === currentMonth)
+    (s) => !allKpi.some((k) => k.storeId === s.id && k.month === currentMonth)
   );
 
-  // 注意が必要な店舗
   const attentionStores: { store: Store; reason: string }[] = [];
   for (const s of stores) {
-    const salesSeries = getKpiSeries(s.id, "sales");
-    const last = salesSeries[salesSeries.length - 1];
-    const overdue = getTasksByStore(s.id).filter(
-      (t) => t.status !== "done" && isOverdue(t.dueDate)
+    const series = kpiSeries(s.id, "sales");
+    const last = series[series.length - 1];
+    const overdue = tasks.filter(
+      (t) => t.storeId === s.id && t.status !== "done" && isOverdue(t.dueDate)
     ).length;
     if (last?.actual != null && last.target != null) {
       const rate = achievementRate(last.actual, last.target) ?? 100;
@@ -204,10 +288,9 @@ export function getDashboardMetrics(filter?: {
     }
   }
 
-  // 成果ランキング（売上改善額順）
   const storeRanking = stores
     .map((s) => {
-      const series = getKpiSeries(s.id, "sales");
+      const series = kpiSeries(s.id, "sales");
       const last = series[series.length - 1];
       const prev = series[series.length - 2];
       const improvement =
@@ -220,8 +303,7 @@ export function getDashboardMetrics(filter?: {
     })
     .sort((a, b) => b.improvement - a.improvement);
 
-  // 担当者ごとの負荷
-  const consultantLoad = getUsers()
+  const consultantLoad = allUsers
     .filter((u) => u.role !== "client")
     .map((u) => ({
       user: u,
@@ -243,7 +325,7 @@ export function getDashboardMetrics(filter?: {
       .slice()
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
       .slice(0, 5)
-      .map((s) => ({ store: s, client: getClient(s.clientId) })),
+      .map((s) => ({ store: s, client: clientById.get(s.clientId) })),
     kpiMissingStores,
     attentionStores,
     storeRanking,

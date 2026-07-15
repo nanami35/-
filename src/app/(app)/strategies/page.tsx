@@ -36,10 +36,10 @@ export default async function StrategiesPage({
 }) {
   await requireUser();
   const sp = await searchParams;
-  const stores = getStores();
+  const stores = await getStores();
   const storeId = sp.store ?? "store_hikari";
-  const store = getStore(storeId);
-  const s = getStrategyByStore(storeId);
+  const [store, s] = await Promise.all([getStore(storeId), getStrategyByStore(storeId)]);
+  const assigneeName = await getUserName(s?.assigneeId);
 
   const acquisition = splitTactics(s?.acquisitionTactics);
   const sales = splitTactics(s?.salesTactics);
@@ -85,7 +85,7 @@ export default async function StrategiesPage({
                   { label: "重点課題", value: s.keyIssues, full: true },
                   { label: "戦略期間", value: s.period },
                   { label: "予算", value: formatCurrency(s.budget) },
-                  { label: "担当者", value: getUserName(s.assigneeId) },
+                  { label: "担当者", value: assigneeName },
                 ]}
               />
             </CardContent>

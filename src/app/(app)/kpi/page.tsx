@@ -53,7 +53,7 @@ export default async function KpiPage({
   await requireUser();
   const sp = await searchParams;
 
-  const stores = getStores();
+  const stores = await getStores();
   const storeOptions = stores.map((s) => ({ value: s.id, label: s.name }));
   const storeId = sp.store ?? stores[0]?.id;
 
@@ -66,13 +66,13 @@ export default async function KpiPage({
     );
   }
 
-  const store = getStore(storeId);
+  const store = await getStore(storeId);
   const activeCat = (sp.cat ?? "sales") as KpiCategory;
-  const months = getKpiMonths(storeId);
+  const months = await getKpiMonths(storeId);
 
   // チャート用データ（売上・客数）
-  const salesSeries = getKpiSeries(storeId, "sales");
-  const customerSeries = getKpiSeries(storeId, "customers");
+  const salesSeries = await getKpiSeries(storeId, "sales");
+  const customerSeries = await getKpiSeries(storeId, "customers");
   const salesData = salesSeries.map((r) => ({ month: formatMonth(r.month), sales: r.actual }));
   const customerData = customerSeries.map((r) => ({
     month: formatMonth(r.month),
@@ -82,8 +82,15 @@ export default async function KpiPage({
   // 表示対象 KPI 定義
   const defs = KPI_DEFINITIONS.filter((d) => d.category === activeCat);
 
+  // KPI 定義ごとの推移を事前ロード（render callback 内で async getter を呼ばない）
+  const seriesByKey = new Map(
+    await Promise.all(
+      defs.map(async (d) => [d.key, await getKpiSeries(storeId, d.key)] as const),
+    ),
+  );
+
   // CSV（当該店舗の全 KPI レコード）
-  const allRecords: KpiRecord[] = getKpiByStore(storeId);
+  const allRecords: KpiRecord[] = await getKpiByStore(storeId);
   const csvRows = allRecords.map((r) => {
     const def = KPI_DEFINITIONS.find((d) => d.key === r.kpiKey);
     return [
@@ -168,7 +175,7 @@ export default async function KpiPage({
             </THead>
             <TBody>
               {defs.map((def) => {
-                const series = getKpiSeries(storeId, def.key);
+                const series = seriesByKey.get(def.key) ?? [];
                 const latest = series[series.length - 1];
                 const prev = series[series.length - 2];
                 const target = latest?.target ?? null;

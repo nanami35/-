@@ -1,12 +1,14 @@
 /**
- * デモ用の簡易認証。
- * Cookie に選択したデモユーザー ID を保存し、サーバーコンポーネントから参照する。
+ * 認証。環境に応じて自動的に切り替わる。
+ *   - Supabase Auth 設定あり → Supabase セッション（メール/パスワード）
+ *   - 設定なし               → デモ用 Cookie（アカウント選択）
  *
- * 本番では Supabase Auth のセッションに置き換える。
- * getCurrentUser() が返すユーザーを境界として UI 側は認証実装に依存しない。
+ * getCurrentUser() が返すアプリユーザーを境界とし、UI は認証実装に依存しない。
  */
 import { cookies } from "next/headers";
-import { getUser, getUsers } from "@/lib/data";
+import { isSupabaseAuthConfigured } from "@/lib/env";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { findUserById, findUserByAuthId, listSelectableUsers } from "@/lib/users";
 import type { User } from "@/types";
 import type { Role } from "@/lib/constants";
 
@@ -15,19 +17,38 @@ const DEFAULT_USER_ID = "user_sato";
 
 /** ログイン中ユーザーを取得する（未ログイン時は undefined） */
 export async function getCurrentUser(): Promise<User | undefined> {
+  // Supabase Auth モード
+  if (isSupabaseAuthConfigured()) {
+    const supabase = await createSupabaseServerClient();
+    if (!supabase) return undefined;
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return undefined;
+    return findUserByAuthId(user.id);
+  }
+
+  // デモモード（Cookie）
   const store = await cookies();
   const id = store.get(AUTH_COOKIE)?.value;
   if (!id) return undefined;
-  return getUser(id);
+  return findUserById(id);
 }
 
-/** ログイン必須。未ログインならデフォルトユーザーにフォールバック（デモ用） */
+/**
+ * ログイン必須。
+ * デモモードでは未ログイン時にデフォルトユーザーへフォールバックする。
+ * Supabase モードでは (app)/layout の getCurrentUser で未ログインを弾く。
+ */
 export async function requireUser(): Promise<User> {
   const user = await getCurrentUser();
   if (user) return user;
-  const fallback = getUser(DEFAULT_USER_ID);
-  if (!fallback) throw new Error("デモユーザーが見つかりません");
-  return fallback;
+
+  if (!isSupabaseAuthConfigured()) {
+    const fallback = await findUserById(DEFAULT_USER_ID);
+    if (fallback) return fallback;
+  }
+  throw new Error("認証が必要です。");
 }
 
 /** ロールがメニュー/機能を利用できるか */
@@ -35,7 +56,7 @@ export function canAccess(role: Role, allowed: Role[]): boolean {
   return allowed.includes(role);
 }
 
-/** ログイン画面で選択可能なデモアカウント */
-export function getDemoAccounts(): User[] {
-  return getUsers();
+/** ログイン画面で選択可能なアカウント（デモ用） */
+export async function getDemoAccounts(): Promise<User[]> {
+  return listSelectableUsers();
 }

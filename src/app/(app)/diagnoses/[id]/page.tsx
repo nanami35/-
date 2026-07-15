@@ -44,13 +44,14 @@ export default async function DiagnosisDetailPage({
   await requireUser();
   const { id } = await params;
 
-  const diag = getDiagnosis(id);
+  const diag = await getDiagnosis(id);
   if (!diag) notFound();
 
-  const store = getStore(diag.storeId);
-  const clientName = store ? getClient(store.clientId)?.name : undefined;
+  const store = await getStore(diag.storeId);
+  const clientName = store ? (await getClient(store.clientId))?.name : undefined;
+  const evaluatorName = await getUserName(diag.evaluatorId);
 
-  const history = getDiagnosesByStore(diag.storeId);
+  const history = await getDiagnosesByStore(diag.storeId);
   const prev = history.find((h) => h.id !== diag.id && h.date < diag.date);
 
   const result = computeDiagnosis(diag.scores);
@@ -90,7 +91,7 @@ export default async function DiagnosisDetailPage({
           </div>
           <div className="text-right">
             <p className="text-xs text-muted-foreground">評価者</p>
-            <p className="text-sm font-medium text-navy-800">{getUserName(diag.evaluatorId)}</p>
+            <p className="text-sm font-medium text-navy-800">{evaluatorName}</p>
           </div>
           <div className="text-right">
             <p className="text-xs text-muted-foreground">総合点</p>

@@ -1,6 +1,6 @@
 import { Instagram } from "lucide-react";
 import { requireUser } from "@/lib/auth";
-import { getSocialContents, getUserName } from "@/lib/data";
+import { getSocialContents, getUserMap } from "@/lib/data";
 import { SOCIAL_PLATFORMS, SOCIAL_STATUS } from "@/lib/constants";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -27,9 +27,11 @@ export default async function SocialPage({
   const sp = await searchParams;
   const view = sp.view ?? "list";
 
-  let contents = getSocialContents();
+  let contents = await getSocialContents();
   if (sp.platform) contents = contents.filter((c) => c.platform === sp.platform);
   if (sp.status) contents = contents.filter((c) => c.status === sp.status);
+
+  const userMap = await getUserMap();
 
   // カレンダー用：投稿日ごとにグルーピング（2026年7月）
   const byDay = new Map<number, SocialContent[]>();
@@ -156,7 +158,7 @@ export default async function SocialPage({
                     </TD>
                     <TD className="font-medium text-navy-800">{c.theme}</TD>
                     <TD>{c.format ?? "—"}</TD>
-                    <TD>{getUserName(c.assigneeId)}</TD>
+                    <TD>{(c.assigneeId ? userMap.get(c.assigneeId) : undefined)?.name ?? "未割当"}</TD>
                     <TD className="whitespace-nowrap">{formatDate(c.postDate)}</TD>
                     <TD>
                       <SocialStatusBadge value={c.status} />

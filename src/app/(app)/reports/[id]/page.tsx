@@ -30,11 +30,13 @@ export default async function ReportDetailPage({
   await requireUser();
   const { id } = await params;
 
-  const report = getReport(id);
+  const report = await getReport(id);
   if (!report) notFound();
 
-  const store = getStore(report.storeId);
-  const kpis = getKpiByStore(report.storeId).filter((k) => k.month === report.month);
+  const store = await getStore(report.storeId);
+  const kpis = (await getKpiByStore(report.storeId)).filter(
+    (k) => k.month === report.month
+  );
 
   const summaryKpis = SUMMARY_KPI_KEYS.map((key) => {
     const def = KPI_DEFINITIONS.find((d) => d.key === key);
