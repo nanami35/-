@@ -49,6 +49,7 @@ export const users: User[] = [
   { id: "user_admin", name: "山田 太郎", email: "admin@example.com", role: "admin", title: "マネージャー", avatarColor: "#1A2B4A", active: true, ...audit() },
   { id: "user_sato", name: "佐藤 花子", email: "sato@example.com", role: "marketer", title: "シニアコンサルタント", avatarColor: "#C9A227", active: true, ...audit() },
   { id: "user_suzuki", name: "鈴木 健", email: "suzuki@example.com", role: "marketer", title: "コンサルタント", avatarColor: "#33507F", active: true, ...audit() },
+  { id: "user_client", name: "田中 誠", email: "tanaka@sample-dining.example.com", role: "client", title: "株式会社サンプルダイニング 代表", avatarColor: "#0F766E", active: true, clientId: "client_1", ...audit() },
 ];
 
 /* ---------------- クライアント ---------------- */

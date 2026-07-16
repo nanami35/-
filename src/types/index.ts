@@ -44,6 +44,8 @@ export interface User extends BaseEntity {
   title?: string;
   avatarColor?: string;
   active: boolean;
+  /** クライアントロールの場合、所属するクライアント企業 */
+  clientId?: ID;
 }
 
 export interface Client extends BaseEntity {

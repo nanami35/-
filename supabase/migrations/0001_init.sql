@@ -47,6 +47,7 @@ CREATE TABLE "users" (
     "title" TEXT,
     "avatarColor" TEXT,
     "active" BOOLEAN NOT NULL DEFAULT true,
+    "clientId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "deletedAt" TIMESTAMP(3),

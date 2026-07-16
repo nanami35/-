@@ -134,6 +134,8 @@ model User {
   title          String?
   avatarColor    String?
   active         Boolean  @default(true)
+  // クライアントロールの所属先（任意）
+  clientId       String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   deletedAt      DateTime?

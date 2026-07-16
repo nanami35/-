@@ -12,12 +12,13 @@ import type { Role } from "@/lib/constants";
 function mapPrismaUser(u: {
   id: string; organizationId: string; name: string; email: string; role: string;
   title: string | null; avatarColor: string | null; active: boolean;
-  createdAt: Date; updatedAt: Date;
+  clientId: string | null; createdAt: Date; updatedAt: Date;
 }): User {
   return {
     id: u.id, organizationId: u.organizationId, name: u.name, email: u.email,
     role: u.role as Role, title: u.title ?? undefined,
     avatarColor: u.avatarColor ?? undefined, active: u.active,
+    clientId: u.clientId ?? undefined,
     createdAt: u.createdAt.toISOString(), updatedAt: u.updatedAt.toISOString(),
     createdBy: u.id, updatedBy: u.id,
   };

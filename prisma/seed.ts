@@ -50,6 +50,7 @@ async function main() {
       data: {
         id: u.id, organizationId: u.organizationId, name: u.name, email: u.email,
         role: u.role, title: u.title, avatarColor: u.avatarColor, active: u.active,
+        clientId: u.clientId,
       },
     });
   }

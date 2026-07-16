@@ -57,6 +57,7 @@ export function createPrismaRepo(orgId: string): Repository {
       return rows.map((u) => ({
         ...base(u), id: u.id, name: u.name, email: u.email, role: u.role as Role,
         title: opt(u.title), avatarColor: opt(u.avatarColor), active: u.active,
+        clientId: opt(u.clientId),
       }));
     },
 
