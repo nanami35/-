@@ -128,7 +128,7 @@ function buildUserPrompt(task: AiTaskType, ctx: StoreContext, req: AiGenerationR
     initiative_ideas: `${header}\n\n課題と戦略を踏まえ、実行可能な施策案を5件程度、目的・仮説・実施内容・想定KPIとともに作成してください。\n\n[課題]\n${ctx.issuesText}\n\n[戦略]\n${ctx.strategyText}`,
     reel_script: `${header}\n\nInstagramリールの構成・台本を作成してください。${req.freeInput ? `テーマ: ${req.freeInput}。` : ""}冒頭2秒のフック、シーン構成、テロップ案、キャプション、ハッシュタグ案を含めてください。ターゲットは ${ctx.store.mainCustomerSegment ?? "近隣層"} です。`,
     review_analysis: `${header}\n\n次のGoogle口コミを分析し、良い点・不満点の傾向、頻出キーワード、改善アクションを整理してください。\n\n[口コミ]\n${req.freeInput ?? "（口コミ本文が入力されていません）"}`,
-    report_draft: `${header}\n\n${req.month ?? "今月"}の月次レポートの下書きを、次の12構成に沿って作成してください:\n${REPORT_SECTIONS.map((s, i) => `${i + 1}. ${s}`).join("\n")}\n\n[直近KPI]\n${ctx.kpiText}\n\n[実施施策]\n${ctx.initiativesText}\n\n[課題]\n${ctx.issuesText}`,
+    report_draft: `${header}\n\n${req.month ?? "今月"}の月次レポートの下書きを、次の12構成で作成してください。各セクションは必ず「## 番号. タイトル」の見出し（例: 「## 1. 今月の総括」）で始め、その下に本文を記載してください:\n${REPORT_SECTIONS.map((s, i) => `${i + 1}. ${s}`).join("\n")}\n\n[直近KPI]\n${ctx.kpiText}\n\n[実施施策]\n${ctx.initiativesText}\n\n[課題]\n${ctx.issuesText}`,
     kpi_hypothesis: `${header}\n\n直近のKPI推移を踏まえ、数値変化の原因仮説を複数挙げ、検証方法とともに整理してください。\n\n[直近KPI]\n${ctx.kpiText}\n\n[実施施策]\n${ctx.initiativesText}`,
     improvement_ideas: `${header}\n\n直近の成果と課題から、来月の改善案（重点施策と期待効果）を提案してください。\n\n[直近KPI]\n${ctx.kpiText}\n\n[課題]\n${ctx.issuesText}\n\n[実施施策]\n${ctx.initiativesText}`,
   };

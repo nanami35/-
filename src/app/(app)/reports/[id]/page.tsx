@@ -3,14 +3,14 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, FileDown, Link2 } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { getReport, getStore, getKpiByStore } from "@/lib/data";
-import { REPORT_SECTIONS, KPI_DEFINITIONS } from "@/lib/constants";
+import { KPI_DEFINITIONS } from "@/lib/constants";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ReportStatusBadge } from "@/components/status-badge";
 import { PrintButton } from "@/components/reports/print-button";
-import { AiDraftButton } from "@/components/ai/ai-draft-button";
+import { ReportSectionsEditor } from "@/components/reports/report-sections-editor";
 import { formatMonth, formatNumber, formatPercent, achievementRate } from "@/lib/utils";
 
 /** KPIサマリーに表示する主要KPI */
@@ -74,18 +74,9 @@ export default async function ReportDetailPage({
             <Link2 className="h-4 w-4" />
             共有URL発行
           </Button>
-          <div className="flex flex-col gap-1 sm:ml-auto sm:items-end">
-            <AiDraftButton
-              task="report_draft"
-              storeId={report.storeId}
-              month={report.month}
-              label="AIでレポート下書き生成"
-              size="sm"
-            />
-            <p className="max-w-xs text-[11px] text-muted-foreground">
-              AIが生成した下書きは必ず担当者が編集・承認してから保存します。
-            </p>
-          </div>
+          <p className="text-[11px] text-muted-foreground sm:ml-auto sm:max-w-xs sm:text-right">
+            下の「編集する」からAIで下書きを生成し、各項目へ反映・編集できます（AI生成物は必ず担当者が承認）。
+          </p>
         </CardContent>
       </Card>
 
@@ -117,27 +108,12 @@ export default async function ReportDetailPage({
         </CardContent>
       </Card>
 
-      {/* レポート本文（12セクション） */}
-      <div className="space-y-4">
-        {REPORT_SECTIONS.map((title, index) => {
-          const body = report.sections[title];
-          return (
-            <Card key={title}>
-              <CardHeader>
-                <CardTitle>
-                  <span className="mr-2 text-muted-foreground">{index + 1}.</span>
-                  {title}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="whitespace-pre-wrap text-sm text-navy-800">
-                  {body && body.trim() !== "" ? body : "—"}
-                </p>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+      {/* レポート本文（12セクション・AI下書き＋編集） */}
+      <ReportSectionsEditor
+        storeId={report.storeId}
+        month={report.month}
+        initialSections={report.sections}
+      />
     </div>
   );
 }
