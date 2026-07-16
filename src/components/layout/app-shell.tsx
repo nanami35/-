@@ -2,17 +2,20 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Menu, X, LogOut, ChevronDown } from "lucide-react";
+import { Menu, LogOut, ChevronDown } from "lucide-react";
 import { Sidebar } from "@/components/layout/sidebar";
+import { NotificationBell } from "@/components/layout/notification-bell";
 import { ROLE_LABELS, type Role } from "@/lib/constants";
+import type { AppNotification } from "@/lib/notifications";
 import { cn } from "@/lib/utils";
 
 interface AppShellProps {
   user: { name: string; role: Role; title?: string; avatarColor?: string };
+  notifications?: AppNotification[];
   children: React.ReactNode;
 }
 
-export function AppShell({ user, children }: AppShellProps) {
+export function AppShell({ user, notifications = [], children }: AppShellProps) {
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [menuOpen, setMenuOpen] = React.useState(false);
 
@@ -45,6 +48,9 @@ export function AppShell({ user, children }: AppShellProps) {
           </button>
 
           <div className="flex-1" />
+
+          {/* 通知 */}
+          <NotificationBell notifications={notifications} />
 
           {/* ユーザーメニュー */}
           <div className="relative">

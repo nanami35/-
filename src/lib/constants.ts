@@ -50,6 +50,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "施策", href: "/initiatives", icon: "Rocket", roles: ["admin", "marketer"], group: "戦略・施策", phase: 1 },
   { label: "SNSコンテンツ", href: "/social", icon: "Instagram", roles: ["admin", "marketer"], group: "戦略・施策", phase: 2 },
   { label: "タスク", href: "/tasks", icon: "ListChecks", roles: ["admin", "marketer"], group: "運用", phase: 1 },
+  { label: "通知", href: "/notifications", icon: "Bell", roles: ["admin", "marketer"], group: "運用", phase: 3 },
   { label: "ミーティング", href: "/meetings", icon: "Users", roles: ["admin", "marketer"], group: "運用", phase: 2 },
   { label: "月次レポート", href: "/reports", icon: "FileText", roles: ["admin", "marketer"], group: "運用", phase: 1 },
   { label: "ナレッジ", href: "/knowledge", icon: "BookOpen", roles: ["admin", "marketer"], group: "分析", phase: 2 },

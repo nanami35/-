@@ -1,13 +1,15 @@
 import {
   LayoutDashboard, Building2, Store, ClipboardList, Gauge, Map, Swords,
   Scale, AlertTriangle, Target, LineChart, Rocket, Instagram, ListChecks,
-  Users, FileText, BookOpen, LayoutTemplate, UserCog, Settings, Sparkles, type LucideIcon,
+  Users, FileText, BookOpen, LayoutTemplate, UserCog, Settings, Sparkles,
+  CalendarClock, Bell, type LucideIcon,
 } from "lucide-react";
 
 const ICONS: Record<string, LucideIcon> = {
   LayoutDashboard, Building2, Store, ClipboardList, Gauge, Map, Swords,
   Scale, AlertTriangle, Target, LineChart, Rocket, Instagram, ListChecks,
   Users, FileText, BookOpen, LayoutTemplate, UserCog, Settings, Sparkles,
+  CalendarClock, Bell,
 };
 
 export function NavIcon({ name, className }: { name: string; className?: string }) {
