@@ -14,11 +14,14 @@
 // 使い方: node scripts/provision-auth-users.mjs
 // ※ secret キーは admin 権限。サーバー/CI でのみ実行し、公開しないこと。
 // =====================================================================
+import crypto from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const secret = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
-const password = process.env.DEMO_PASSWORD || "Abengers#2026";
+// DEMO_PASSWORD 未指定なら、推測不能なランダム値を生成(公開リポジトリに直書きしない)。
+const password =
+  process.env.DEMO_PASSWORD || "Ab" + crypto.randomBytes(12).toString("base64url") + "#9";
 
 if (!url || !secret) {
   console.error(
@@ -55,7 +58,10 @@ async function main() {
   for (const a of ACCOUNTS) {
     let user = await findUserByEmail(a.email);
     if (user) {
-      console.log(`= 既存: ${a.email}(${user.id})`);
+      // 冪等化: 既存ユーザーはパスワードを既知の値へ更新(印字する資格情報を常に有効化)
+      const { error } = await admin.auth.admin.updateUserById(user.id, { password, email_confirm: true });
+      if (error) throw new Error(`updateUser 失敗(${a.email}): ${error.message}`);
+      console.log(`= 既存(更新): ${a.email}(${user.id})`);
     } else {
       const { data, error } = await admin.auth.admin.createUser({
         email: a.email,

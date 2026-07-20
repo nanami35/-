@@ -14,10 +14,13 @@ let memorySingleton: MemoryProvider | null = null;
  * - supabase   : SupabaseProvider(RLS。per-user には accessToken を渡す)
  * SupabaseProvider は動的 import で読み込み、seed モードでは supabase-js を触らない。
  */
-export async function getData(accessToken?: string): Promise<DataProvider> {
+export async function getData(): Promise<DataProvider> {
   if (isSupabaseMode()) {
-    const { SupabaseProvider } = await import("./supabase");
-    return new SupabaseProvider(accessToken);
+    const [{ SupabaseProvider }, { createServerSupabase }] = await Promise.all([
+      import("./supabase"),
+      import("@/lib/supabase-server"),
+    ]);
+    return new SupabaseProvider(await createServerSupabase());
   }
   return (memorySingleton ??= new MemoryProvider());
 }

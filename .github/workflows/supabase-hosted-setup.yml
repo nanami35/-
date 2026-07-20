@@ -1,0 +1,40 @@
+name: Supabase hosted setup
+
+# ホスト型 Supabase の初期化(Phase 1.1 手順1):
+#   1. マイグレーション適用(Management API / DBパスワード不要)
+#   2. デモデータ投入(service キー / PostgREST)
+#   3. 権限別3アカウント作成(Auth admin API)
+# 手動実行(workflow_dispatch)。既定ブランチ(main)に存在する必要がある。
+#
+# 必要な GitHub Secrets(登録済み想定):
+#   SUPABASE_ACCESS_TOKEN, SUPABASE_PROJECT_REF,
+#   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+on:
+  workflow_dispatch:
+
+jobs:
+  setup:
+    name: migrate・seed・accounts(ホスト)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: マイグレーション適用(Management API)
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: node scripts/apply-hosted.mjs
+      - name: デモデータ投入(service キー)
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/seed-hosted.mjs
+      - name: 権限別3アカウント作成(Auth admin)
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/provision-auth-users.mjs

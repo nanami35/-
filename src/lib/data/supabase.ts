@@ -13,23 +13,17 @@ import type {
   Source,
   BaseEntity,
 } from "@/lib/types";
-import { createUserClient } from "@/lib/supabase";
-
 // =====================================================================
 // Supabase 実装(DATA_SOURCE=supabase)
-// 参照は RLS を効かせたユーザー文脈クライアントで行うため、可視性は DB(RLS)が
-// 担保する(アプリ側の追加フィルタは不要)。行→ドメイン型のマッピングを行う。
-// per-user RLS には Supabase Auth のアクセストークンが必要(Phase 1.1 タスク3)。
-// トークン未指定時は publishable(anon)文脈となり、公開情報のみが見える。
+// 参照は RLS を効かせたユーザー文脈クライアント(Cookie 連携)で行うため、
+// 可視性は DB(RLS)が担保する(アプリ側の追加フィルタは不要)。
+// Supabase Auth でログイン済みなら、その本人として per-user RLS が効く。
 // =====================================================================
 
 export class SupabaseProvider implements DataProvider {
   readonly kind = "supabase" as const;
-  private readonly client: SupabaseClient;
 
-  constructor(accessToken?: string) {
-    this.client = createUserClient(accessToken);
-  }
+  constructor(private readonly client: SupabaseClient) {}
 
   private async list<T>(table: string, map: (row: Row) => T): Promise<T[]> {
     const { data, error } = await this.client

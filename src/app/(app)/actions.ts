@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser, destroySession } from "@/lib/auth";
+import { isSupabaseMode } from "@/lib/supabase";
 import { audit, db, newId, nowIso } from "@/lib/store";
 import { canApprove, canEdit } from "@/lib/rbac";
 import type { Company, KnowledgeArticle, Status, Visibility } from "@/lib/types";
@@ -11,7 +12,12 @@ import { base } from "@/lib/seed/helpers";
 export async function logoutAction(): Promise<void> {
   const user = await getCurrentUser();
   if (user) audit(user.organizationId, user.id, "auth.logout");
-  await destroySession();
+  if (isSupabaseMode()) {
+    const { supabaseSignOut } = await import("@/lib/auth-supabase");
+    await supabaseSignOut();
+  } else {
+    await destroySession();
+  }
   redirect("/login");
 }
 
