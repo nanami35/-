@@ -2,8 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { canApprove, canEdit } from "@/lib/rbac";
-import { getOne, isFavorite, q, userName } from "@/lib/queries";
-import { db } from "@/lib/store";
+import { isFavorite, q, userName } from "@/lib/queries";
 import { Card, CardBody } from "@/components/ui/card";
 import { Tabs } from "@/components/ui/tabs";
 import { Field, BulletList } from "@/components/ui/page";
@@ -19,12 +18,12 @@ export default async function KnowledgeDetail({ params }: { params: Promise<{ id
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   const { id } = await params;
-  const k = getOne(user, db.knowledgeArticles, id);
+  const k = await q.getKnowledge(user, id);
   if (!k) notFound();
   const path = `/knowledge/${id}`;
 
-  const relatedCompanies = q.companies(user).filter((c) => k.relatedCompanyIds?.includes(c.id));
-  const relatedCases = q.cases(user).filter((c) => k.relatedCaseIds?.includes(c.id));
+  const relatedCompanies = (await q.companies(user)).filter((c) => k.relatedCompanyIds?.includes(c.id));
+  const relatedCases = (await q.cases(user)).filter((c) => k.relatedCaseIds?.includes(c.id));
 
   return (
     <div>

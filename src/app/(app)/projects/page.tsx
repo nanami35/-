@@ -11,7 +11,7 @@ import { Lock } from "lucide-react";
 export default async function ProjectsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  const projects = q.projects(user);
+  const projects = await q.projects(user);
 
   return (
     <div>

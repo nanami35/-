@@ -1,7 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
-import { getOne } from "@/lib/queries";
-import { db } from "@/lib/store";
+import { q } from "@/lib/queries";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Field } from "@/components/ui/page";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +12,7 @@ export default async function MeetingDetail({ params }: { params: Promise<{ id: 
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   const { id } = await params;
-  const m = getOne(user, db.meetings, id);
+  const m = await q.getMeeting(user, id);
   if (!m) notFound();
   const path = `/meetings/${id}`;
 

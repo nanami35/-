@@ -17,7 +17,7 @@ export default async function CasesPage({
   if (!user) redirect("/login");
   const { kind } = await searchParams;
 
-  let cases = q.cases(user);
+  let cases = await q.cases(user);
   if (kind === "success" || kind === "failure") cases = cases.filter((c) => c.kind === kind);
 
   return (

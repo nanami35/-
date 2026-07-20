@@ -20,7 +20,8 @@ export default async function CompaniesPage({
   if (!user) redirect("/login");
   const { category, kw } = await searchParams;
 
-  let companies = q.companies(user);
+  const allCompanies = await q.companies(user);
+  let companies = allCompanies;
   if (category) companies = companies.filter((c) => c.category === category);
   if (kw) {
     const k = kw.toLowerCase();
@@ -29,7 +30,8 @@ export default async function CompaniesPage({
     );
   }
 
-  const categories = Array.from(new Set(q.companies(user).map((c) => c.category)));
+  const totalCount = allCompanies.length;
+  const categories = Array.from(new Set(allCompanies.map((c) => c.category)));
 
   return (
     <div>
@@ -51,7 +53,7 @@ export default async function CompaniesPage({
       {/* カテゴリフィルタ */}
       <div className="mb-4 flex flex-wrap gap-2">
         <Link href="/companies">
-          <Badge tone={!category ? "navy" : "gray"}>すべて({q.companies(user).length})</Badge>
+          <Badge tone={!category ? "navy" : "gray"}>すべて({totalCount})</Badge>
         </Link>
         {categories.map((c) => (
           <Link key={c} href={`/companies?category=${c}`}>

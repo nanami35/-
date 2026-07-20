@@ -1,0 +1,24 @@
+name: Supabase hosted verify
+
+# ホスト型 Supabase に対する マイグレーション→Seed→RLS実機テスト。
+# 手動実行(workflow_dispatch)。新規プロジェクト/リセット直後に対して実行する。
+#
+# 必要な GitHub Secrets:
+#   SUPABASE_DB_URL … Postgres 直接接続文字列(DDL 適用に必須)
+#     ※ 既登録の URL / anon / service_role は API 層キーで DDL には使えないため、
+#        DB 接続文字列を追加登録してください。
+on:
+  workflow_dispatch:
+
+jobs:
+  hosted-verify:
+    name: migrations・seed・RLS(ホスト)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: PostgreSQL クライアント導入
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: ホスト Supabase で検証
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: bash supabase/test/run-hosted.sh

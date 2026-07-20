@@ -15,9 +15,9 @@ export default async function ApprovalsPage() {
 
   type Row = { entityType: string; id: string; title: string; href: string; status: import("@/lib/types").Status };
   const rows: Row[] = [];
-  q.companies(user).forEach((c) => c.status === "pending_review" && rows.push({ entityType: "company", id: c.id, title: c.name, href: `/companies/${c.id}`, status: c.status }));
-  q.knowledge(user).forEach((k) => k.status === "pending_review" && rows.push({ entityType: "knowledge", id: k.id, title: k.title, href: `/knowledge/${k.id}`, status: k.status }));
-  q.cases(user).forEach((c) => c.status === "pending_review" && rows.push({ entityType: "case", id: c.id, title: c.title, href: `/cases/${c.id}`, status: c.status }));
+  (await q.companies(user)).forEach((c) => c.status === "pending_review" && rows.push({ entityType: "company", id: c.id, title: c.name, href: `/companies/${c.id}`, status: c.status }));
+  (await q.knowledge(user)).forEach((k) => k.status === "pending_review" && rows.push({ entityType: "knowledge", id: k.id, title: k.title, href: `/knowledge/${k.id}`, status: k.status }));
+  (await q.cases(user)).forEach((c) => c.status === "pending_review" && rows.push({ entityType: "case", id: c.id, title: c.title, href: `/cases/${c.id}`, status: c.status }));
 
   const TYPE: Record<string, string> = { company: "企業", knowledge: "ノウハウ", case: "事例" };
 
