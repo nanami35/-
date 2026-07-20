@@ -183,6 +183,25 @@ NEXT_PUBLIC_SUPABASE_URL=... SUPABASE_SECRET_KEY=sb_secret_... \
 > ホスト型 Supabase の `auth.users` は Auth 経由でのみ作成できます
 > (`seed.sql` の `auth.users` INSERT はローカル/CI 用)。ホストでは本スクリプトで作成します。
 
+### 4-2. ワンショット初期化(Management API・DBパスワード不要)
+
+`.github/workflows/supabase-hosted-setup.yml`(手動実行)で、ホストの
+**マイグレーション適用 → デモデータ投入 → 権限別3アカウント作成**を一括実行します。
+DB 接続文字列は不要で、登録済みの `SUPABASE_ACCESS_TOKEN` / `SUPABASE_PROJECT_REF`
+(Management API)と `SUPABASE_SERVICE_ROLE_KEY`(PostgREST / Auth admin)を使います。
+
+- `scripts/apply-hosted.mjs` … Management API でマイグレーション適用
+- `scripts/seed-hosted.mjs` … service キーで orgs・企業(可視性違い)を投入
+- `scripts/provision-auth-users.mjs` … Auth に管理者/編集者/閲覧者を作成(冪等)
+
+### 4-3. Supabase Auth ログイン(supabase モード)
+
+`DATA_SOURCE=supabase` のとき、ログインは **Supabase Auth**(`signInWithPassword`)で行われ、
+Cookie セッションから user_profiles を解決してロール/所属を得ます(`src/lib/auth-supabase.ts`)。
+データ参照は Cookie 連携クライアント(`src/lib/supabase-server.ts`)経由となり、
+**ログイン中ユーザー本人として per-user RLS** が適用されます。seed モードは従来どおり
+署名付き Cookie セッションで動作します(切替は `DATA_SOURCE` のみ)。
+
 ### 4. AI(RAG)
 
 `AI_PROVIDER` と各 API キーを設定すると、RAG が実 API + pgvector(`document_chunks`)で動作します。

@@ -38,7 +38,7 @@ function firstEnv(names: string[]): { name: string; value: string } | null {
   return null;
 }
 
-function requireUrl(): string {
+export function requireSupabaseUrl(): string {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
   if (!url) {
     throw new Error(
@@ -53,7 +53,7 @@ function requireUrl(): string {
  * 新形式 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY を優先し、
  * 従来の NEXT_PUBLIC_SUPABASE_ANON_KEY を後方互換で受け付ける。
  */
-function resolvePublishableKey(): string {
+export function resolvePublishableKey(): string {
   const found = firstEnv([
     "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
     "NEXT_PUBLIC_SUPABASE_ANON_KEY",
@@ -105,7 +105,7 @@ const baseOptions = {
  * 新形式 sb_publishable_… / 従来 anon JWT のどちらでも動作する。
  */
 export function createUserClient(accessToken?: string): SupabaseClient {
-  const url = requireUrl();
+  const url = requireSupabaseUrl();
   const key = resolvePublishableKey();
   return createClient(url, key, {
     ...baseOptions,
@@ -121,7 +121,7 @@ export function createUserClient(accessToken?: string): SupabaseClient {
  * 新形式 sb_secret_… / 従来 service_role JWT のどちらでも動作する。
  */
 export function createServiceClient(): SupabaseClient {
-  const url = requireUrl();
+  const url = requireSupabaseUrl();
   const key = resolveSecretKey();
   return createClient(url, key, baseOptions);
 }

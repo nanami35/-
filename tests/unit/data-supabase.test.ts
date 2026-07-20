@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-// createUserClient をモックし、SupabaseProvider のクエリ構築と行→ドメイン
-// 型マッピングを検証する(実 Supabase 接続なしで adapter の正しさを担保)。
+// フェイクの Supabase クライアントで、SupabaseProvider のクエリ構築と
+// 行→ドメイン型マッピングを検証する(実 Supabase 接続なしで adapter の正しさを担保)。
 
 const calls: { table: string; filters: Record<string, unknown> } = { table: "", filters: {} };
 let rowsByTable: Record<string, unknown[]> = {};
@@ -25,10 +26,7 @@ function makeBuilder(table: string) {
   return builder;
 }
 
-vi.mock("@/lib/supabase", () => ({
-  createUserClient: () => ({ from: (table: string) => makeBuilder(table) }),
-  isSupabaseMode: () => true,
-}));
+const fakeClient = { from: (table: string) => makeBuilder(table) } as unknown as SupabaseClient;
 
 import { SupabaseProvider } from "@/lib/data/supabase";
 import type { SafeUser } from "@/lib/types";
@@ -63,7 +61,7 @@ describe("SupabaseProvider(モッククライアント)", () => {
         updated_at: "2026-02-01",
       },
     ];
-    const provider = new SupabaseProvider();
+    const provider = new SupabaseProvider(fakeClient);
     const list = await provider.listCompanies(user);
 
     expect(calls.table).toBe("companies");
@@ -81,7 +79,7 @@ describe("SupabaseProvider(モッククライアント)", () => {
 
   it("getCompany は id で単一行を取得し、無ければ null", async () => {
     rowsByTable.companies = [];
-    const provider = new SupabaseProvider();
+    const provider = new SupabaseProvider(fakeClient);
     const c = await provider.getCompany(user, "missing");
     expect(calls.filters).toHaveProperty("id", "missing");
     expect(c).toBeNull();
@@ -102,7 +100,7 @@ describe("SupabaseProvider(モッククライアント)", () => {
         certainty_level: "confirmed",
       },
     ];
-    const provider = new SupabaseProvider();
+    const provider = new SupabaseProvider(fakeClient);
     const list = await provider.listKnowledge(user);
     expect(calls.table).toBe("knowledge_articles");
     expect(list[0]!.title).toBe("FC本部構築のセンターピン");
@@ -111,6 +109,6 @@ describe("SupabaseProvider(モッククライアント)", () => {
   });
 
   it("kind は 'supabase'", () => {
-    expect(new SupabaseProvider().kind).toBe("supabase");
+    expect(new SupabaseProvider(fakeClient).kind).toBe("supabase");
   });
 });

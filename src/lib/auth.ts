@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import crypto from "node:crypto";
 import type { SafeUser, User } from "@/lib/types";
 import { db } from "@/lib/store";
+import { isSupabaseMode } from "@/lib/supabase";
 
 // =====================================================================
 // 認証(要件 8-1)
@@ -58,6 +59,11 @@ export async function destroySession(): Promise<void> {
 }
 
 export async function getCurrentUser(): Promise<SafeUser | null> {
+  // supabase モードは Supabase Auth のセッションから解決する。
+  if (isSupabaseMode()) {
+    const { getSupabaseUser } = await import("@/lib/auth-supabase");
+    return getSupabaseUser();
+  }
   const jar = await cookies();
   const raw = jar.get(COOKIE)?.value;
   if (!raw) return null;
