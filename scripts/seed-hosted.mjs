@@ -29,7 +29,8 @@ const organizations = [
 ];
 
 // 可視性の異なる企業(権限別3アカウントのRLSデモ用)
-const owner = "22222222-2222-2222-2222-222222220001"; // admin(provision で作成)
+// created_by / updated_by は user_profiles への FK。アカウント作成前に投入するため
+// null のままにする(列は nullable)。表示上の作成者は未設定となるが可視性判定には影響しない。
 const companies = [
   mkCompany("33333333-0000-0000-0000-000000000001", "ABENGERS", "abengers", "共同経営型 事業創造", "all_staff", "A", "confirmed", { valueProposition: "構想・経営・実行・人材・マーケ・FC化・出資までを一体で担う共同経営型の事業創造" }),
   mkCompany("33333333-0000-0000-0000-000000000002", "ABENGERS極秘事業計画", "abengers", "未公開事業", "abengers_only", "A", "confirmed", { valueProposition: "(機密)新規事業の構想" }),
@@ -50,8 +51,6 @@ const businessModels = [
     status: "published",
     confidence_level: "A",
     certainty_level: "confirmed",
-    created_by: owner,
-    updated_by: owner,
   },
 ];
 
@@ -69,8 +68,6 @@ function mkCompany(id, name, category, industry, visibility, cl, cert, bm) {
     business_model: bm,
     analysis: {},
     application: {},
-    created_by: owner,
-    updated_by: owner,
   };
 }
 
