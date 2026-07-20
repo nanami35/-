@@ -203,6 +203,7 @@ npm run build       # 本番ビルド
 | `08-implementation-notes.md` | 実装手順・リスク・注意点 |
 | `09-supabase-setup.md` | Supabase 連携手順・全環境変数・RLS |
 | `10-ai-features.md` | AI機能（下書き生成・人間承認フロー） |
+| `11-integrations.md` | 外部連携（アダプタ設計・データ取り込み） |
 
 ---
 
@@ -249,6 +250,16 @@ npm run build       # 本番ビルド
 - `ANTHROPIC_API_KEY` を設定すると **Claude** に接続（既定モデル `claude-opus-4-8`）。
   未設定でも**モック生成**で動作します。詳細は [`docs/10-ai-features.md`](docs/10-ai-features.md)。
 - APIキーはサーバー専用（`/api/ai/generate`）で扱い、フロントに露出しません。
+
+## 外部連携（データ取り込み）
+
+サイドバーの **外部連携** から、店舗ごとに各媒体（Googleビジネス / Instagram / TikTok /
+LINE / 広告 / POS）のデータを取り込み、KPIへ反映できます。
+
+- **共通アダプタ抽象**で各媒体を実装（`src/lib/integrations/`）。既定はモック取得。
+- 各媒体のトークンを `.env` に設定すると**実API接続**へ切替（`live-adapters.ts` が拡張点）。
+- 取り込んだ数値は**プレビュー→確認してから反映**（そのまま保存しません）。Googleは口コミも取得。
+- 詳細は [`docs/11-integrations.md`](docs/11-integrations.md)。
 
 ## ロードマップ
 

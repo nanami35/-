@@ -55,6 +55,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "月次レポート", href: "/reports", icon: "FileText", roles: ["admin", "marketer"], group: "運用", phase: 1 },
   { label: "ナレッジ", href: "/knowledge", icon: "BookOpen", roles: ["admin", "marketer"], group: "分析", phase: 2 },
   { label: "AIアシスタント", href: "/ai", icon: "Sparkles", roles: ["admin", "marketer"], group: "戦略・施策", phase: 3 },
+  { label: "外部連携", href: "/integrations", icon: "Plug", roles: ["admin", "marketer"], group: "管理", phase: 3 },
   { label: "テンプレート", href: "/templates", icon: "LayoutTemplate", roles: ["admin"], group: "管理", phase: 2 },
   { label: "ユーザー管理", href: "/users", icon: "UserCog", roles: ["admin"], group: "管理", phase: 1 },
   { label: "設定", href: "/settings", icon: "Settings", roles: ["admin", "marketer"], group: "管理", phase: 1 },
