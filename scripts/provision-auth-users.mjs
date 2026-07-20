@@ -91,8 +91,15 @@ async function main() {
     results.push({ email: a.email, role: a.role, password });
   }
 
-  console.log("\n=== プロビジョニング完了。ログイン情報 ===");
-  for (const r of results) console.log(`  ${r.role.padEnd(12)} ${r.email}  /  ${r.password}`);
+  // セキュリティ: パスワードはログへ出力しない(公開リポジトリの Actions ログ対策)。
+  // 値は GitHub Secret 経由で渡し、共有はチャット等の安全な経路で行うこと。
+  console.log("\n=== プロビジョニング完了(パスワードは非表示)===");
+  for (const r of results) console.log(`  ${r.role.padEnd(12)} ${r.email}  / (password set)`);
+  console.log(
+    process.env.DEMO_PASSWORD
+      ? "  パスワードは DEMO_PASSWORD(Secret 推奨)で設定されました。"
+      : "  ⚠ DEMO_PASSWORD 未指定のためランダム生成しました。ダッシュボード等で確認/再設定してください。",
+  );
 }
 
 main().catch((e) => {
