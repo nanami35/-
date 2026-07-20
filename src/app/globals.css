@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-sans: "Inter", system-ui, sans-serif;
+}
+
+html,
+body {
+  background-color: #f7f8fa;
+  color: #1f2937;
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer components {
+  .prose-jp {
+    @apply text-sm leading-7 text-ink;
+  }
+  .prose-jp h2 {
+    @apply mt-4 mb-2 text-base font-semibold text-navy;
+  }
+  .prose-jp ul {
+    @apply my-2 list-disc pl-5;
+  }
+  .prose-jp li {
+    @apply my-0.5;
+  }
+  .prose-jp strong {
+    @apply font-semibold text-navy;
+  }
+  .prose-jp blockquote {
+    @apply my-2 border-l-2 border-gold pl-3 text-muted;
+  }
+}
+
+/* スクロールバーの軽量化 */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: #d6deeb;
+  border-radius: 6px;
+}
