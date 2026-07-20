@@ -1,25 +1,32 @@
-import type { BaseEntity, SafeUser } from "@/lib/types";
 import { db } from "@/lib/store";
-import { canView, filterViewable } from "@/lib/rbac";
+import type { SafeUser } from "@/lib/types";
+import { getData } from "@/lib/data";
 
-// 可視性を適用した読み取りヘルパー(RLS相当をアプリ層で保証)
+// =====================================================================
+// 読み取りヘルパー(Phase 1.1)
+// 図鑑系の参照はデータプロバイダ(memory / supabase)へ委譲する。
+// 可視性は memory では rbac、supabase では RLS が担保する。
+// 個人/協働データ(お気に入り・コメント・通知・ユーザー名)は現状 store 参照
+// (supabase モードでの移行は次段。既定の seed モードでは完全に整合)。
+// =====================================================================
+
 export const q = {
-  companies: (u: SafeUser) => filterViewable(u, db.companies),
-  businessModels: (u: SafeUser) => filterViewable(u, db.businessModels),
-  knowledge: (u: SafeUser) => filterViewable(u, db.knowledgeArticles),
-  cases: (u: SafeUser) => filterViewable(u, db.caseStudies),
-  projects: (u: SafeUser) => filterViewable(u, db.projects),
-  meetings: (u: SafeUser) => filterViewable(u, db.meetings),
-  sources: (u: SafeUser) => filterViewable(u, db.sources),
-  people: (u: SafeUser) => filterViewable(u, db.people),
+  companies: async (u: SafeUser) => (await getData()).listCompanies(u),
+  getCompany: async (u: SafeUser, id: string) => (await getData()).getCompany(u, id),
+  businessModels: async (u: SafeUser) => (await getData()).listBusinessModels(u),
+  getBusinessModel: async (u: SafeUser, id: string) => (await getData()).getBusinessModel(u, id),
+  knowledge: async (u: SafeUser) => (await getData()).listKnowledge(u),
+  getKnowledge: async (u: SafeUser, id: string) => (await getData()).getKnowledge(u, id),
+  cases: async (u: SafeUser) => (await getData()).listCases(u),
+  getCase: async (u: SafeUser, id: string) => (await getData()).getCase(u, id),
+  projects: async (u: SafeUser) => (await getData()).listProjects(u),
+  getProject: async (u: SafeUser, id: string) => (await getData()).getProject(u, id),
+  meetings: async (u: SafeUser) => (await getData()).listMeetings(u),
+  getMeeting: async (u: SafeUser, id: string) => (await getData()).getMeeting(u, id),
+  people: async (u: SafeUser) => (await getData()).listPeople(u),
+  getPerson: async (u: SafeUser, id: string) => (await getData()).getPerson(u, id),
+  sources: async (u: SafeUser) => (await getData()).listSources(u),
 };
-
-/** 1件取得(閲覧不可なら null) */
-export function getOne<T extends BaseEntity>(u: SafeUser, list: T[], id: string): T | null {
-  const item = list.find((x) => x.id === id);
-  if (!item) return null;
-  return canView(u, item) ? item : null;
-}
 
 export function isFavorite(userId: string, entityType: string, entityId: string): boolean {
   return db.favorites.some(

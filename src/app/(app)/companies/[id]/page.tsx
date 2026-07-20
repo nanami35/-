@@ -2,8 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { canApprove, canEdit } from "@/lib/rbac";
-import { getOne, isFavorite, q } from "@/lib/queries";
-import { db } from "@/lib/store";
+import { isFavorite, q } from "@/lib/queries";
 import { Card, CardBody } from "@/components/ui/card";
 import { Tabs } from "@/components/ui/tabs";
 import { Field, BulletList } from "@/components/ui/page";
@@ -18,7 +17,7 @@ export default async function CompanyDetail({ params }: { params: Promise<{ id: 
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   const { id } = await params;
-  const c = getOne(user, db.companies, id);
+  const c = await q.getCompany(user, id);
   if (!c) notFound();
 
   const path = `/companies/${id}`;
@@ -26,8 +25,8 @@ export default async function CompanyDetail({ params }: { params: Promise<{ id: 
   const an = c.analysis;
   const ap = c.application;
 
-  const relatedCases = q.cases(user).filter((cs) => cs.companyId === c.id);
-  const relatedKnowledge = q.knowledge(user).filter((k) => k.relatedCompanyIds?.includes(c.id));
+  const relatedCases = (await q.cases(user)).filter((cs) => cs.companyId === c.id);
+  const relatedKnowledge = (await q.knowledge(user)).filter((k) => k.relatedCompanyIds?.includes(c.id));
 
   const yn = (v?: boolean) => (v === undefined ? "不明" : v ? "あり" : "なし");
 

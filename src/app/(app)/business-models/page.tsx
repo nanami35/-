@@ -12,7 +12,7 @@ import { Table2 } from "lucide-react";
 export default async function BusinessModelsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  const models = q.businessModels(user);
+  const models = await q.businessModels(user);
 
   return (
     <div>

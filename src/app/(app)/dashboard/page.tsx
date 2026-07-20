@@ -25,11 +25,11 @@ export default async function DashboardPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const companies = q.companies(user);
-  const knowledge = q.knowledge(user);
-  const cases = q.cases(user);
-  const models = q.businessModels(user);
-  const projects = q.projects(user);
+  const companies = await q.companies(user);
+  const knowledge = await q.knowledge(user);
+  const cases = await q.cases(user);
+  const models = await q.businessModels(user);
+  const projects = await q.projects(user);
 
   const pendingApprovals = canApprove(user)
     ? [...companies, ...knowledge, ...cases].filter((e) => e.status === "pending_review")

@@ -1,8 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { canApprove, canEdit } from "@/lib/rbac";
-import { getOne, isFavorite } from "@/lib/queries";
-import { db } from "@/lib/store";
+import { isFavorite, q } from "@/lib/queries";
 import { Card, CardBody } from "@/components/ui/card";
 import { Tabs } from "@/components/ui/tabs";
 import { Field, BulletList } from "@/components/ui/page";
@@ -16,7 +15,7 @@ export default async function CaseDetail({ params }: { params: Promise<{ id: str
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   const { id } = await params;
-  const c = getOne(user, db.caseStudies, id);
+  const c = await q.getCase(user, id);
   if (!c) notFound();
   const path = `/cases/${id}`;
 

@@ -1,7 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
-import { getOne, isFavorite } from "@/lib/queries";
-import { db } from "@/lib/store";
+import { isFavorite, q } from "@/lib/queries";
 import { Card, CardBody } from "@/components/ui/card";
 import { Field, BulletList } from "@/components/ui/page";
 import { TrustBadges } from "@/components/trust-badges";
@@ -11,7 +10,7 @@ export default async function PersonDetail({ params }: { params: Promise<{ id: s
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   const { id } = await params;
-  const p = getOne(user, db.people, id);
+  const p = await q.getPerson(user, id);
   if (!p) notFound();
   const path = `/people/${id}`;
 

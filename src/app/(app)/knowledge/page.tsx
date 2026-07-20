@@ -20,9 +20,10 @@ export default async function KnowledgePage({
   if (!user) redirect("/login");
   const { category } = await searchParams;
 
-  let articles = q.knowledge(user);
+  const allArticles = await q.knowledge(user);
+  let articles = allArticles;
   if (category) articles = articles.filter((a) => a.category === category);
-  const categories = Array.from(new Set(q.knowledge(user).map((a) => a.category)));
+  const categories = Array.from(new Set(allArticles.map((a) => a.category)));
 
   return (
     <div>

@@ -1,8 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
-import { getOne, isFavorite, q } from "@/lib/queries";
-import { db } from "@/lib/store";
+import { isFavorite, q } from "@/lib/queries";
 import { Card, CardBody } from "@/components/ui/card";
 import { Tabs } from "@/components/ui/tabs";
 import { Field, BulletList } from "@/components/ui/page";
@@ -15,12 +14,12 @@ export default async function ProjectDetail({ params }: { params: Promise<{ id: 
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   const { id } = await params;
-  const p = getOne(user, db.projects, id);
+  const p = await q.getProject(user, id);
   if (!p) notFound();
   const path = `/projects/${id}`;
 
-  const relatedKnowledge = q.knowledge(user).filter((k) => p.reusableKnowledgeIds?.includes(k.id));
-  const relatedMeetings = q.meetings(user).filter((m) => m.projectId === p.id);
+  const relatedKnowledge = (await q.knowledge(user)).filter((k) => p.reusableKnowledgeIds?.includes(k.id));
+  const relatedMeetings = (await q.meetings(user)).filter((m) => m.projectId === p.id);
 
   return (
     <div>

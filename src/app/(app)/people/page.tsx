@@ -9,7 +9,7 @@ import { TrustBadges } from "@/components/trust-badges";
 export default async function PeoplePage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  const people = q.people(user);
+  const people = await q.people(user);
 
   return (
     <div>

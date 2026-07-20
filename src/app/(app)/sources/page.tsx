@@ -11,7 +11,7 @@ import { Rss, ExternalLink } from "lucide-react";
 export default async function SourcesPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  const sources = q.sources(user);
+  const sources = await q.sources(user);
 
   return (
     <div>

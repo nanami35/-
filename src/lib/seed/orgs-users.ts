@@ -1,5 +1,19 @@
+import crypto from "node:crypto";
 import type { Organization, User } from "@/lib/types";
 import { ABENGERS_ORG, KOENI_ORG, SEED_GROUP_ORG } from "./helpers";
+
+// =====================================================================
+// デモ用アカウントのパスワード(seed モード)
+// 本番URLは公開のため、パスワードをソースへ直書きしない(公開リポジトリ対策)。
+//   - SEED_DEMO_PASSWORD が設定されていればそれを使用(推奨:本番は Vercel の env で設定)
+//   - 未設定かつ本番(production): ランダム値でフェイルクローズ(seed ログインを実質無効化)
+//   - 未設定かつ開発: 利便性のため "password"(ローカルは非公開のため許容)
+// =====================================================================
+const DEMO_PW =
+  process.env.SEED_DEMO_PASSWORD ||
+  (process.env.NODE_ENV === "production"
+    ? crypto.randomBytes(24).toString("hex")
+    : "password");
 
 export const organizations: Organization[] = [
   { id: SEED_GROUP_ORG, name: "SEEDグループ", slug: "seed-group", kind: "group", createdAt: "2026-01-01T00:00:00Z" },
@@ -7,12 +21,12 @@ export const organizations: Organization[] = [
   { id: KOENI_ORG, name: "コエニ", slug: "koeni", kind: "company", parentId: SEED_GROUP_ORG, createdAt: "2026-01-01T00:00:00Z" },
 ];
 
-// デモ用ユーザー。パスワードは README に記載(本番は Supabase Auth)。
+// デモ用ユーザー。パスワードは環境変数 SEED_DEMO_PASSWORD で管理(本番は Supabase Auth)。
 export const users: User[] = [
   {
     id: "user-hori",
     email: "admin@abengers.jp",
-    password: "password",
+    password: DEMO_PW,
     name: "堀 健一",
     organizationId: ABENGERS_ORG,
     role: "super_admin",
@@ -25,7 +39,7 @@ export const users: User[] = [
   {
     id: "user-approver",
     email: "approver@abengers.jp",
-    password: "password",
+    password: DEMO_PW,
     name: "承認 太郎",
     organizationId: ABENGERS_ORG,
     role: "approver",
@@ -37,7 +51,7 @@ export const users: User[] = [
   {
     id: "user-editor",
     email: "editor@abengers.jp",
-    password: "password",
+    password: DEMO_PW,
     name: "編集 花子",
     organizationId: ABENGERS_ORG,
     role: "editor",
@@ -48,7 +62,7 @@ export const users: User[] = [
   {
     id: "user-koeni",
     email: "marketer@koeni.jp",
-    password: "password",
+    password: DEMO_PW,
     name: "小枝 実",
     organizationId: KOENI_ORG,
     role: "editor",
@@ -60,7 +74,7 @@ export const users: User[] = [
   {
     id: "user-viewer",
     email: "viewer@abengers.jp",
-    password: "password",
+    password: DEMO_PW,
     name: "閲覧 次郎",
     organizationId: ABENGERS_ORG,
     role: "viewer",

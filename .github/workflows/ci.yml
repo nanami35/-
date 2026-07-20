@@ -28,6 +28,10 @@ jobs:
   e2e:
     name: playwright E2E
     runs-on: ubuntu-latest
+    # 本番モードの next start では seed パスワードがフェイルクローズされるため、
+    # E2E 用に既知のデモパスワードを注入する(サーバー起動とテストで共有)。
+    env:
+      SEED_DEMO_PASSWORD: e2e-demo-pass
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

@@ -110,14 +110,20 @@ E2E_BASE_URL=http://localhost:3000 npm run test:e2e
 ### 1. プロジェクト作成と接続情報
 
 1. [Supabase](https://supabase.com/) でプロジェクトを作成。
-2. **Project Settings → API** から以下を取得し `.env.local` に設定:
+2. **Project Settings → API Keys** から**新形式のキー**を取得し `.env.local` に設定:
    ```env
    DATA_SOURCE=supabase
    NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
-   SUPABASE_SERVICE_ROLE_KEY=eyJ...        # サーバー専用・秘匿
+   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...   # anon 相当・公開可
+   SUPABASE_SECRET_KEY=sb_secret_...                         # service_role 相当・サーバー専用/秘匿
    ```
    接続文字列(**Project Settings → Database**)を `DATABASE_URL` として控えておく。
+
+   > **キー形式について**: 本アプリは新形式 API キー(`sb_publishable_` / `sb_secret_`)に
+   > 対応しています。従来の anon / service_role JWT(`eyJ...`)も後方互換で利用でき、
+   > `NEXT_PUBLIC_SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY` に設定すると
+   > 新形式キーが未設定の場合のみ使用されます(`src/lib/supabase.ts`)。
+   > secret キーを `NEXT_PUBLIC_...` の公開スロットへ置くと露出防止のため起動時に例外になります。
 
 ### 2. マイグレーション + Seed の適用
 
@@ -151,6 +157,32 @@ DATABASE_URL="postgresql://postgres:postgres@localhost:5432/postgres" \
 正しく絞り込むこと(可視件数 5 / 1 / 2 など)を assertion 付きで検証します。
 このテストは GitHub Actions の `db-rls` ジョブとして PR ごとに自動実行されます。
 
+### 4. ホスト型 Supabase での実機検証・アカウント作成(Phase 1.1)
+
+**データアクセス層の切替**: アプリは `DATA_SOURCE` で参照先を切り替えます
+(`src/lib/data/`)。`seed`=インメモリ(既定・モック)、`supabase`=Supabase(RLS)。
+図鑑系の参照は `DataProvider`(memory / supabase 実装)経由で行われます。
+
+**ホストへのマイグレーション + RLS 検証**(`.github/workflows/supabase-hosted-verify.yml`,
+手動実行): GitHub Secrets に **`SUPABASE_DB_URL`**(Postgres 直接接続文字列)を追加し、
+新規プロジェクトに対して実行します。
+```bash
+SUPABASE_DB_URL="postgresql://postgres:<pw>@db.<ref>.supabase.co:5432/postgres" \
+  bash supabase/test/run-hosted.sh
+```
+> 既登録の URL / anon(publishable)/ service_role(secret)は **API 層のキー**で、
+> `psql`/DDL 適用には使えません。DDL には DB 接続文字列(`SUPABASE_DB_URL`)が別途必要です。
+
+**権限別3アカウントの作成**(Supabase Auth): secret キーで Auth に
+管理者・編集者・閲覧者を作成し `user_profiles` へ紐付けます。
+```bash
+NEXT_PUBLIC_SUPABASE_URL=... SUPABASE_SECRET_KEY=sb_secret_... \
+  node scripts/provision-auth-users.mjs
+# 完了後、各アカウントの email / password が出力されます
+```
+> ホスト型 Supabase の `auth.users` は Auth 経由でのみ作成できます
+> (`seed.sql` の `auth.users` INSERT はローカル/CI 用)。ホストでは本スクリプトで作成します。
+
 ### 4. AI(RAG)
 
 `AI_PROVIDER` と各 API キーを設定すると、RAG が実 API + pgvector(`document_chunks`)で動作します。
@@ -165,8 +197,8 @@ DATABASE_URL="postgresql://postgres:postgres@localhost:5432/postgres" \
    | --- | --- | --- |
    | `DATA_SOURCE` | `supabase` | 本番は supabase 推奨 |
    | `AUTH_SECRET` | (32文字以上のランダム値) | 必須・秘匿 |
-   | `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | — | Supabase 接続 |
-   | `SUPABASE_SERVICE_ROLE_KEY` | — | サーバー専用・秘匿 |
+   | `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | — | Supabase 接続(publishable, `sb_publishable_…`) |
+   | `SUPABASE_SECRET_KEY` | — | サーバー専用・秘匿(secret, `sb_secret_…`)。従来 JWT も後方互換で可 |
    | `AI_PROVIDER` + 各 API キー | `anthropic` 等 | 省略時は mock |
 3. デプロイ実行(`main` への push または PR の Preview で自動)。ビルドは `npm run build`。
 4. 事前に「本番(Supabase)構成への接続手順」でマイグレーション + Seed を適用しておく。

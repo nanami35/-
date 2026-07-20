@@ -1,8 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
-import { getOne, isFavorite, q } from "@/lib/queries";
-import { db } from "@/lib/store";
+import { isFavorite, q } from "@/lib/queries";
 import { Card, CardBody } from "@/components/ui/card";
 import { Tabs } from "@/components/ui/tabs";
 import { Field, BulletList } from "@/components/ui/page";
@@ -15,11 +14,11 @@ export default async function BusinessModelDetail({ params }: { params: Promise<
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   const { id } = await params;
-  const m = getOne(user, db.businessModels, id);
+  const m = await q.getBusinessModel(user, id);
   if (!m) notFound();
   const path = `/business-models/${id}`;
 
-  const companies = q.companies(user).filter((c) => m.representativeCompanyIds?.includes(c.id));
+  const companies = (await q.companies(user)).filter((c) => m.representativeCompanyIds?.includes(c.id));
 
   return (
     <div>

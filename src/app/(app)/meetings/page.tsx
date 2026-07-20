@@ -10,7 +10,7 @@ import { CalendarClock } from "lucide-react";
 export default async function MeetingsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  const meetings = q.meetings(user);
+  const meetings = await q.meetings(user);
 
   return (
     <div>
