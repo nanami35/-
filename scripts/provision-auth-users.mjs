@@ -35,11 +35,31 @@ const ORG_KOENI = "11111111-1111-1111-1111-111111110003";
 
 const ACCOUNTS = [
   { email: "admin@abengers.jp", name: "管理者 太郎", role: "super_admin", org: ORG_ABENGERS, isExecutive: true, isManager: true },
+  { email: "approver@abengers.jp", name: "承認 太郎", role: "approver", org: ORG_ABENGERS, isExecutive: false, isManager: true },
   { email: "editor@abengers.jp", name: "編集者 花子", role: "editor", org: ORG_ABENGERS, isExecutive: false, isManager: false },
+  { email: "marketer@koeni.jp", name: "小枝 実", role: "editor", org: ORG_KOENI, isExecutive: false, isManager: true },
   { email: "viewer@abengers.jp", name: "閲覧者 次郎", role: "viewer", org: ORG_ABENGERS, isExecutive: false, isManager: false },
 ];
 
 const admin = createClient(url, secret, { auth: { persistSession: false, autoRefreshToken: false } });
+
+// 診断: publishable(anon)キーで実際に signInWithPassword が通るか検証する。
+// 認証機構(gotrue + 新形式キー)が機能しているかを、パスワードを出力せず確認する。
+async function verifySignIn(email, pw) {
+  const anonKey =
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!anonKey) {
+    console.log("  (signin テスト skip: publishable/anon キー未設定)");
+    return;
+  }
+  const anon = createClient(url, anonKey, { auth: { persistSession: false } });
+  const { data, error } = await anon.auth.signInWithPassword({ email, password: pw });
+  if (error) {
+    console.log(`  ✗ signin テスト失敗(${email}): ${error.message}`);
+  } else {
+    console.log(`  ✓ signin テスト成功(${email}) — publishable キーで認証OK / user=${data.user?.id}`);
+  }
+}
 
 async function findUserByEmail(email) {
   // ページングして既存ユーザーを検索(冪等化のため)
@@ -98,8 +118,11 @@ async function main() {
   console.log(
     process.env.DEMO_PASSWORD
       ? "  パスワードは DEMO_PASSWORD(Secret 推奨)で設定されました。"
-      : "  ⚠ DEMO_PASSWORD 未指定のためランダム生成しました。ダッシュボード等で確認/再設定してください。",
+      : "  ⚠ DEMO_PASSWORD 未指定のためランダム生成(値は非表示)。DEMO_PASSWORD Secret を設定して再実行してください。",
   );
+
+  console.log("\n=== 認証機構の検証(signin テスト)===");
+  await verifySignIn(ACCOUNTS[0].email, password);
 }
 
 main().catch((e) => {
