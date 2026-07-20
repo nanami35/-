@@ -6,14 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/field";
 import { AlertTriangle } from "lucide-react";
 
-const DEMO = [
-  { role: "スーパー管理者", email: "admin@abengers.jp" },
-  { role: "承認者", email: "approver@abengers.jp" },
-  { role: "編集者(ABENGERS)", email: "editor@abengers.jp" },
-  { role: "編集者(コエニ)", email: "marketer@koeni.jp" },
-  { role: "閲覧専用", email: "viewer@abengers.jp" },
-];
-
 export default function LoginPage() {
   const [state, formAction, pending] = useActionState(loginAction, undefined);
 
@@ -49,11 +41,11 @@ export default function LoginPage() {
           <form action={formAction} className="mt-6 space-y-4">
             <div>
               <Label>メールアドレス</Label>
-              <Input name="email" type="email" required placeholder="admin@abengers.jp" defaultValue="admin@abengers.jp" />
+              <Input name="email" type="email" required placeholder="you@example.com" autoComplete="username" />
             </div>
             <div>
               <Label>パスワード</Label>
-              <Input name="password" type="password" required placeholder="password" defaultValue="password" />
+              <Input name="password" type="password" required placeholder="••••••••" autoComplete="current-password" />
             </div>
 
             {state?.error && (
@@ -68,19 +60,9 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <div className="mt-6 rounded-lg bg-canvas p-3">
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted">
-              デモアカウント(パスワードは全て password)
-            </p>
-            <ul className="space-y-1 text-xs text-ink">
-              {DEMO.map((d) => (
-                <li key={d.email} className="flex justify-between">
-                  <span className="text-muted">{d.role}</span>
-                  <span className="font-mono">{d.email}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <p className="mt-6 text-[11px] text-muted">
+            アクセス権限が必要な場合は管理者にお問い合わせください。
+          </p>
         </div>
       </div>
     </div>

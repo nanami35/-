@@ -1,10 +1,13 @@
 import { test, expect } from "@playwright/test";
 
 // 主要フローのE2Eスモークテスト(要件22 完成条件)。
+// seed のデモパスワードは SEED_DEMO_PASSWORD(未設定時は "password")。
+const DEMO_PASSWORD = process.env.SEED_DEMO_PASSWORD ?? "password";
+
 async function login(page: import("@playwright/test").Page, email = "admin@abengers.jp") {
   await page.goto("/login");
   await page.fill('input[name="email"]', email);
-  await page.fill('input[name="password"]', "password");
+  await page.fill('input[name="password"]', DEMO_PASSWORD);
   await page.click('button[type="submit"]');
   await page.waitForURL("**/dashboard");
 }
