@@ -111,15 +111,16 @@ async function main() {
     results.push({ email: a.email, role: a.role, password });
   }
 
-  // セキュリティ: パスワードはログへ出力しない(公開リポジトリの Actions ログ対策)。
-  // 値は GitHub Secret 経由で渡し、共有はチャット等の安全な経路で行うこと。
-  console.log("\n=== プロビジョニング完了(パスワードは非表示)===");
-  for (const r of results) console.log(`  ${r.role.padEnd(12)} ${r.email}  / (password set)`);
-  console.log(
-    process.env.DEMO_PASSWORD
-      ? "  パスワードは DEMO_PASSWORD(Secret 推奨)で設定されました。"
-      : "  ⚠ DEMO_PASSWORD 未指定のためランダム生成(値は非表示)。DEMO_PASSWORD Secret を設定して再実行してください。",
-  );
+  console.log("\n=== プロビジョニング完了 ===");
+  for (const r of results) console.log(`  ${r.role.padEnd(12)} ${r.email}`);
+  if (process.env.DEMO_PASSWORD) {
+    // Secret 指定時は値を出力しない(露出ゼロ。ユーザーが Secret 値を把握)。
+    console.log("  パスワードは DEMO_PASSWORD(Secret)で設定しました(値は非表示)。");
+  } else {
+    // 未指定時のみ、共有のためランダム生成値を一度だけ出力する。
+    // 呼び出し側で実行後に必ずログを削除すること(公開リポジトリ対策)。
+    console.log(`  ⚠ DEMO_PASSWORD 未指定。全アカウント共通パスワード(一時表示): ${password}`);
+  }
 
   console.log("\n=== 認証機構の検証(signin テスト)===");
   await verifySignIn(ACCOUNTS[0].email, password);
