@@ -110,14 +110,20 @@ E2E_BASE_URL=http://localhost:3000 npm run test:e2e
 ### 1. プロジェクト作成と接続情報
 
 1. [Supabase](https://supabase.com/) でプロジェクトを作成。
-2. **Project Settings → API** から以下を取得し `.env.local` に設定:
+2. **Project Settings → API Keys** から**新形式のキー**を取得し `.env.local` に設定:
    ```env
    DATA_SOURCE=supabase
    NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
-   SUPABASE_SERVICE_ROLE_KEY=eyJ...        # サーバー専用・秘匿
+   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...   # anon 相当・公開可
+   SUPABASE_SECRET_KEY=sb_secret_...                         # service_role 相当・サーバー専用/秘匿
    ```
    接続文字列(**Project Settings → Database**)を `DATABASE_URL` として控えておく。
+
+   > **キー形式について**: 本アプリは新形式 API キー(`sb_publishable_` / `sb_secret_`)に
+   > 対応しています。従来の anon / service_role JWT(`eyJ...`)も後方互換で利用でき、
+   > `NEXT_PUBLIC_SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY` に設定すると
+   > 新形式キーが未設定の場合のみ使用されます(`src/lib/supabase.ts`)。
+   > secret キーを `NEXT_PUBLIC_...` の公開スロットへ置くと露出防止のため起動時に例外になります。
 
 ### 2. マイグレーション + Seed の適用
 
@@ -165,8 +171,8 @@ DATABASE_URL="postgresql://postgres:postgres@localhost:5432/postgres" \
    | --- | --- | --- |
    | `DATA_SOURCE` | `supabase` | 本番は supabase 推奨 |
    | `AUTH_SECRET` | (32文字以上のランダム値) | 必須・秘匿 |
-   | `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | — | Supabase 接続 |
-   | `SUPABASE_SERVICE_ROLE_KEY` | — | サーバー専用・秘匿 |
+   | `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | — | Supabase 接続(publishable, `sb_publishable_…`) |
+   | `SUPABASE_SECRET_KEY` | — | サーバー専用・秘匿(secret, `sb_secret_…`)。従来 JWT も後方互換で可 |
    | `AI_PROVIDER` + 各 API キー | `anthropic` 等 | 省略時は mock |
 3. デプロイ実行(`main` への push または PR の Preview で自動)。ビルドは `npm run build`。
 4. 事前に「本番(Supabase)構成への接続手順」でマイグレーション + Seed を適用しておく。
