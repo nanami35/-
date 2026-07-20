@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 25% 98%;
+    --foreground: 218 47% 20%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 218 47% 20%;
+
+    --primary: 218 48% 20%; /* navy #1A2B4A */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 214 30% 95%;
+    --secondary-foreground: 218 47% 20%;
+
+    --muted: 214 25% 95%;
+    --muted-foreground: 215 16% 47%;
+
+    --accent: 45 68% 47%; /* gold #C9A227 */
+    --accent-foreground: 0 0% 100%;
+
+    --border: 214 25% 90%;
+    --input: 214 25% 88%;
+    --ring: 45 68% 47%;
+
+    --radius: 0.625rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "palt";
+  }
+  /* スクロールバー */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-navy-200;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-navy-300;
+  }
+}
+
+@layer components {
+  .card-surface {
+    @apply rounded-xl border border-border bg-card shadow-sm;
+  }
+}
